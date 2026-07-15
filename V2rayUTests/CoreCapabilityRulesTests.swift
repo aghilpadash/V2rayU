@@ -200,6 +200,17 @@ struct CoreCapabilityRulesTests {
         let hasHeaderReason = reasons.contains { $0.contains("HTTP") || $0.contains("伪装") }
         #expect(hasHeaderReason)
     }
+
+    @Test func singboxRulesMergeOverrideAndBundled() {
+        guard let document = CapabilityRulesLoader.load(core: .singbox) else {
+            #expect(false, "Failed to load singbox capability rules")
+            return
+        }
+        let hasSSHOutbound = document.capabilities.contains { $0.key == "outbound.ssh" }
+        #expect(hasSSHOutbound)
+        let hasDirectOutbound = document.capabilities.contains { $0.key == "outbound.freedom" }
+        #expect(hasDirectOutbound)
+    }
 }
 
 // Helper to check if XrayFeatureAvailability is "supported"
