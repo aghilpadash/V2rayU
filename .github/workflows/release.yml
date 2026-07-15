@@ -1,0 +1,56 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release macOS ARM
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install appdmg
+        run: sudo npm install -g appdmg
+
+      - name: Select Xcode Version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || echo "Using default Xcode: $(xcode-select -p)"
+
+      - name: Run Build Script
+        run: |
+          chmod +x Build/build.sh
+          ./Build/build.sh
+
+      - name: Get Version
+        id: get_version
+        run: |
+          APP_VERSION=$(sed -n '/MARKETING_VERSION/{s/MARKETING_VERSION = //;s/;//;s/^[[:space:]]*//;p;q;}' V2rayU.xcodeproj/project.pbxproj)
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "Version found: $APP_VERSION"
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release or upload to existing release
+          gh release create "v${{ env.APP_VERSION }}" \
+            --title "V2rayU v${{ env.APP_VERSION }}" \
+            --notes "Automated build for V2rayU v${{ env.APP_VERSION }} (macOS ARM/Universal)" \
+            --prerelease=false \
+            --draft=false \
+            Build/V2rayU-arm64.dmg Build/V2rayU-64.dmg Build/release/V2rayU-${{ env.APP_VERSION }}-dSYM.zip || \
+          gh release upload "v${{ env.APP_VERSION }}" \
+            Build/V2rayU-arm64.dmg Build/V2rayU-64.dmg Build/release/V2rayU-${{ env.APP_VERSION }}-dSYM.zip --clobber
