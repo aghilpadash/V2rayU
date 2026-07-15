@@ -313,32 +313,87 @@ enum CapabilityRulesLoader {
         )
     }
 
+    private static func mergeCapabilities(override: CapabilityRulesDocument, bundled: CapabilityRulesDocument) -> CapabilityRulesDocument {
+        var mergedPayloads = bundled.capabilities
+        let overrideDict = Dictionary(uniqueKeysWithValues: override.capabilities.map { ($0.key, $0) })
+        for (i, capability) in mergedPayloads.enumerated() {
+            if let o = overrideDict[capability.key] {
+                mergedPayloads[i] = o
+            }
+        }
+        
+        let bundledKeys = Set(bundled.capabilities.map { $0.key })
+        for capability in override.capabilities {
+            if !bundledKeys.contains(capability.key) {
+                mergedPayloads.append(capability)
+            }
+        }
+
+        return CapabilityRulesDocument(
+            schemaVersion: override.schemaVersion,
+            core: override.core,
+            latestReviewedVersion: override.latestReviewedVersion,
+            capabilities: mergedPayloads
+        )
+    }
+
     private static func loadDetailed(core: CapabilityRulesCore) -> (document: CapabilityRulesDocument, url: URL, sourceKind: CapabilityRulesSourceKind)? {
-        // 持锁读取 cache，避免与 invalidateCache 或其他并发读写的竞争
         if let cached = cacheLock.withLock({ cache[core] }) {
             return cached
         }
 
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        for candidate in candidateURLs(for: core) {
-            guard FileManager.default.fileExists(atPath: candidate.url.path) else {
-                continue
-            }
+
+        let urls = candidateURLs(for: core)
+        let overrideCandidate = urls.first { $0.sourceKind == .overrideFile }
+        let bundleCandidate = urls.first { $0.sourceKind == .bundledFile }
+
+        var overrideDoc: CapabilityRulesDocument?
+        var overrideURL: URL?
+        if let o = overrideCandidate, FileManager.default.fileExists(atPath: o.url.path) {
             do {
-                let data = try Data(contentsOf: candidate.url)
-                let document = try decoder.decode(CapabilityRulesDocument.self, from: data)
-                guard supportedSchemaVersions.contains(document.schemaVersion), document.core == core, !document.capabilities.isEmpty else {
-                    logger.warning("capability rules invalid: \(candidate.url.path)")
-                    continue
+                let data = try Data(contentsOf: o.url)
+                let doc = try decoder.decode(CapabilityRulesDocument.self, from: data)
+                if supportedSchemaVersions.contains(doc.schemaVersion), doc.core == core, !doc.capabilities.isEmpty {
+                    overrideDoc = doc
+                    overrideURL = o.url
                 }
-                let result = (document, candidate.url, candidate.sourceKind)
-                cacheLock.withLock { cache[core] = result } // 持锁写入 cache
-                return result
             } catch {
-                logger.warning("capability rules load failed: \(candidate.url.path) error=\(error.localizedDescription)")
+                logger.warning("capability override rules load failed: \(o.url.path) error=\(error.localizedDescription)")
             }
         }
+
+        var bundleDoc: CapabilityRulesDocument?
+        var bundleURL: URL?
+        if let b = bundleCandidate, FileManager.default.fileExists(atPath: b.url.path) {
+            do {
+                let data = try Data(contentsOf: b.url)
+                let doc = try decoder.decode(CapabilityRulesDocument.self, from: data)
+                if supportedSchemaVersions.contains(doc.schemaVersion), doc.core == core, !doc.capabilities.isEmpty {
+                    bundleDoc = doc
+                    bundleURL = b.url
+                }
+            } catch {
+                logger.warning("capability bundle rules load failed: \(b.url.path) error=\(error.localizedDescription)")
+            }
+        }
+
+        if let overrideDoc = overrideDoc, let bundleDoc = bundleDoc, let overrideURL = overrideURL {
+            let merged = mergeCapabilities(override: overrideDoc, bundled: bundleDoc)
+            let result = (merged, overrideURL, CapabilityRulesSourceKind.overrideFile)
+            cacheLock.withLock { cache[core] = result }
+            return result
+        } else if let overrideDoc = overrideDoc, let overrideURL = overrideURL {
+            let result = (overrideDoc, overrideURL, CapabilityRulesSourceKind.overrideFile)
+            cacheLock.withLock { cache[core] = result }
+            return result
+        } else if let bundleDoc = bundleDoc, let bundleURL = bundleURL {
+            let result = (bundleDoc, bundleURL, CapabilityRulesSourceKind.bundledFile)
+            cacheLock.withLock { cache[core] = result }
+            return result
+        }
+
         return nil
     }
 
@@ -442,25 +497,25 @@ struct XraySupportRule {
         let statusText: String
         switch status {
         case .supported:
-            statusText = "当前主线支持功能"
+            statusText = "Currently supported features in mainline"
         case .legacy:
-            statusText = "历史/兼容功能"
+            statusText = "Historical / compatibility features"
         case .compatibility:
-            statusText = "兼容映射功能"
+            statusText = "Compatibility mapping features"
         case .unsupported:
-            statusText = "当前应用/核心组合不支持功能"
+            statusText = "Unsupported features for the current app/core combination"
         case .removed:
-            statusText = "已移除功能"
+            statusText = "Removed features"
         case .pendingReview:
-            statusText = "待核对功能"
+            statusText = "Features pending review"
         }
 
         var parts: [String] = [statusText]
         if let legacyMin {
-            parts.append("旧语义版本 >= \(legacyMin.description)")
+            parts.append("Legacy semantic version >= \(legacyMin.description)")
         }
         if let calendarMin {
-            parts.append("日期版本 >= \(calendarMin.description)")
+            parts.append("Calendar date version >= \(calendarMin.description)")
         }
         if let removedAt {
             parts.append("< \(removedAt.description)")
@@ -482,9 +537,9 @@ struct XraySupportRule {
             return .unsupported(reason: note)
         case .removed:
             if let version, let removedAt {
-                return .advisory(reason: "\(featureName) 在较新版本已被标记为 removed（>= \(removedAt.description)）；当前版本 \(version.description) 仍可能可用。\(note)")
+                return .advisory(reason: "\(featureName) is marked as removed in newer versions (>= \(removedAt.description)); current version \(version.description) may still be available. \(note)")
             }
-            return .unsupported(reason: "\(featureName) 已被当前功能支持规则标记为 removed。\(note)")
+            return .unsupported(reason: "\(featureName) has been marked as removed by current compatibility rules. \(note)")
         case .pendingReview:
             return .advisory(reason: note)
         }
@@ -495,18 +550,18 @@ struct XraySupportRule {
             return nil
         }
         guard let version else {
-            return .unknown(reason: "无法识别当前 Xray-core 版本，无法判断 \(featureName) 的版本边界。\(note)")
+            return .unknown(reason: "Cannot identify current Xray-core version, unable to determine version bounds for \(featureName). \(note)")
         }
         if let removedAt, version >= removedAt {
-            let removalText = status == .removed ? "已被移除" : "在当前兼容规则中不建议继续使用"
-            return .unsupported(reason: "\(featureName) 在 Xray-core \(version.description) 已落入受限区间（>= \(removedAt.description)），该功能\(removalText)。\(note)")
+            let removalText = status == .removed ? "has been removed" : "is deprecated in current compatibility rules"
+            return .unsupported(reason: "\(featureName) in Xray-core \(version.description) falls within the restricted range (>= \(removedAt.description)), this feature \(removalText). \(note)")
         }
         if version.isCalendarStyle {
             if let calendarMin, version < calendarMin {
-                return .unsupported(reason: "\(featureName) 需要日期版本 >= \(calendarMin.description)。\(note)")
+                return .unsupported(reason: "\(featureName) requires calendar date version >= \(calendarMin.description). \(note)")
             }
         } else if let legacyMin, version < legacyMin {
-            return .unsupported(reason: "\(featureName) 需要旧语义版本 >= \(legacyMin.description)。\(note)")
+            return .unsupported(reason: "\(featureName) requires legacy semantic version >= \(legacyMin.description). \(note)")
         }
         return nil
     }
@@ -586,11 +641,11 @@ struct XrayCompatibilityIssue {
         case .supported:
             return ""
         case .advisory(let reason):
-            return "• [提示][\(capability.kind.rawValue)] \(capability.displayName)：\(reason)"
+            return "• [Notice][\(capability.kind.rawValue)] \(capability.displayName): \(reason)"
         case .unsupported(let reason):
-            return "• [不兼容][\(capability.kind.rawValue)] \(capability.displayName)：\(reason)"
+            return "• [Incompatible][\(capability.kind.rawValue)] \(capability.displayName): \(reason)"
         case .unknown(let reason):
-            return "• [待确认][\(capability.kind.rawValue)] \(capability.displayName)：\(reason)"
+            return "• [Pending][\(capability.kind.rawValue)] \(capability.displayName): \(reason)"
         }
     }
 }
@@ -624,102 +679,102 @@ enum SingboxFallbackCompatibility {
 enum XraySupportCatalog {
     static let builtInCapabilities: [XrayCapabilityDefinition] = [
         // MARK: Inbound protocols
-        XrayCapabilityDefinition(key: "inbound.tunnel", displayName: "Tunnel (dokodemo-door) inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/tunnel.html"),
-        XrayCapabilityDefinition(key: "inbound.http", displayName: "HTTP inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/http.html"),
-        XrayCapabilityDefinition(key: "inbound.shadowsocks", displayName: "Shadowsocks inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/shadowsocks.html"),
-        XrayCapabilityDefinition(key: "inbound.socks", displayName: "SOCKS inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/socks.html"),
-        XrayCapabilityDefinition(key: "inbound.trojan", displayName: "Trojan inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/trojan.html"),
-        XrayCapabilityDefinition(key: "inbound.vless", displayName: "VLESS inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/vless.html"),
-        XrayCapabilityDefinition(key: "inbound.vmess", displayName: "VMess inbound", kind: .inboundProtocol, rule: .supported(note: "官方入站协议列表可见。"), docsPath: "/config/inbounds/vmess.html"),
-        XrayCapabilityDefinition(key: "inbound.wireguard", displayName: "WireGuard inbound", kind: .inboundProtocol, rule: .supported(note: "当前官方入站协议列表明确列出。"), docsPath: "/config/inbounds/wireguard.html"),
-        XrayCapabilityDefinition(key: "inbound.hysteria", displayName: "Hysteria2 inbound", kind: .inboundProtocol, rule: .supported(note: "当前官方入站协议列表明确列出。"), docsPath: "/config/inbounds/hysteria.html"),
-        XrayCapabilityDefinition(key: "inbound.tun", displayName: "TUN inbound", kind: .inboundProtocol, rule: .supported(note: "当前官方入站协议列表明确列出。"), docsPath: "/config/inbounds/tun.html"),
+        XrayCapabilityDefinition(key: "inbound.tunnel", displayName: "Tunnel (dokodemo-door) inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/tunnel.html"),
+        XrayCapabilityDefinition(key: "inbound.http", displayName: "HTTP inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/http.html"),
+        XrayCapabilityDefinition(key: "inbound.shadowsocks", displayName: "Shadowsocks inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/shadowsocks.html"),
+        XrayCapabilityDefinition(key: "inbound.socks", displayName: "SOCKS inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/socks.html"),
+        XrayCapabilityDefinition(key: "inbound.trojan", displayName: "Trojan inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/trojan.html"),
+        XrayCapabilityDefinition(key: "inbound.vless", displayName: "VLESS inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/vless.html"),
+        XrayCapabilityDefinition(key: "inbound.vmess", displayName: "VMess inbound", kind: .inboundProtocol, rule: .supported(note: "Visible in official inbound protocol list."), docsPath: "/config/inbounds/vmess.html"),
+        XrayCapabilityDefinition(key: "inbound.wireguard", displayName: "WireGuard inbound", kind: .inboundProtocol, rule: .supported(note: "Explicitly listed in current official inbound protocol list."), docsPath: "/config/inbounds/wireguard.html"),
+        XrayCapabilityDefinition(key: "inbound.hysteria", displayName: "Hysteria2 inbound", kind: .inboundProtocol, rule: .supported(note: "Explicitly listed in current official inbound protocol list."), docsPath: "/config/inbounds/hysteria.html"),
+        XrayCapabilityDefinition(key: "inbound.tun", displayName: "TUN inbound", kind: .inboundProtocol, rule: .supported(note: "Explicitly listed in current official inbound protocol list."), docsPath: "/config/inbounds/tun.html"),
 
-        XrayCapabilityDefinition(key: "inbound.mixed", displayName: "Mixed (HTTP+SOCKS) inbound", kind: .inboundProtocol, rule: .supported(note: "Xray-core 官方入站协议列表未列出 mixed 类型，但代码实现自 v24.12.31 起以 socks 别名形式支持（commit 5af9068）。经 Build/tests/test-mixed-inbound.sh 批量测试验证：v1.8.4～v24.12.18 报 unknown config id: mixed，v24.12.31+ 正常接受。", calendarMin: XrayVersion(24, 12, 31)), docsPath: nil),
+        XrayCapabilityDefinition(key: "inbound.mixed", displayName: "Mixed (HTTP+SOCKS) inbound", kind: .inboundProtocol, rule: .supported(note: "Xray-core official inbound protocol list does not list mixed type, but the code has supported it as a socks alias since v24.12.31 (commit 5af9068). Verified via Build/tests/test-mixed-inbound.sh: v1.8.4~v24.12.18 reports unknown config id: mixed, v24.12.31+ accepts it.", calendarMin: XrayVersion(24, 12, 31)), docsPath: nil),
 
         // MARK: Outbound protocols
-        XrayCapabilityDefinition(key: "outbound.blackhole", displayName: "Blackhole outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/blackhole.html"),
-        XrayCapabilityDefinition(key: "outbound.dns", displayName: "DNS outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/dns.html"),
-        XrayCapabilityDefinition(key: "outbound.freedom", displayName: "Freedom outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/freedom.html"),
-        XrayCapabilityDefinition(key: "outbound.http", displayName: "HTTP outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/http.html"),
-        XrayCapabilityDefinition(key: "outbound.loopback", displayName: "Loopback outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表明确列出。"), docsPath: "/config/outbounds/loopback.html"),
-        XrayCapabilityDefinition(key: "outbound.shadowsocks", displayName: "Shadowsocks outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/shadowsocks.html"),
-        XrayCapabilityDefinition(key: "outbound.socks", displayName: "SOCKS outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/socks.html"),
-        XrayCapabilityDefinition(key: "outbound.trojan", displayName: "Trojan outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/trojan.html"),
-        XrayCapabilityDefinition(key: "outbound.vless", displayName: "VLESS outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/vless.html"),
-        XrayCapabilityDefinition(key: "outbound.vmess", displayName: "VMess outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表可见。"), docsPath: "/config/outbounds/vmess.html"),
-        XrayCapabilityDefinition(key: "outbound.anytls", displayName: "AnyTLS outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "V2rayU 当前未实现 Xray-core AnyTLS outbound 配置生成；按 capability rule 自动选择 sing-box。"), docsPath: nil),
-        XrayCapabilityDefinition(key: "outbound.naive", displayName: "Naive outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "Xray-core/V2rayU 当前没有 naive outbound 配置生成；按 capability rule 自动选择 sing-box。"), docsPath: nil),
-        XrayCapabilityDefinition(key: "outbound.ssh", displayName: "SSH outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "Xray-core 不支持 SSH 出站；按 capability rule 自动选择 sing-box。"), docsPath: nil),
-        XrayCapabilityDefinition(key: "outbound.wireguard", displayName: "WireGuard outbound", kind: .outboundProtocol, rule: .supported(note: "当前官方出站协议列表明确列出。"), docsPath: "/config/outbounds/wireguard.html"),
-        XrayCapabilityDefinition(key: "outbound.hysteria", displayName: "Hysteria2 outbound", kind: .outboundProtocol,             rule: .supported(note: "Xray-core 在 v26.1.23 新增 hysteria2 outbound 支持。日历版本 < 26.1.23 不支持。", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(26, 1, 23)), docsPath: "/config/outbounds/hysteria.html"),
+        XrayCapabilityDefinition(key: "outbound.blackhole", displayName: "Blackhole outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/blackhole.html"),
+        XrayCapabilityDefinition(key: "outbound.dns", displayName: "DNS outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/dns.html"),
+        XrayCapabilityDefinition(key: "outbound.freedom", displayName: "Freedom outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/freedom.html"),
+        XrayCapabilityDefinition(key: "outbound.http", displayName: "HTTP outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/http.html"),
+        XrayCapabilityDefinition(key: "outbound.loopback", displayName: "Loopback outbound", kind: .outboundProtocol, rule: .supported(note: "Explicitly listed in current official outbound protocol list."), docsPath: "/config/outbounds/loopback.html"),
+        XrayCapabilityDefinition(key: "outbound.shadowsocks", displayName: "Shadowsocks outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/shadowsocks.html"),
+        XrayCapabilityDefinition(key: "outbound.socks", displayName: "SOCKS outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/socks.html"),
+        XrayCapabilityDefinition(key: "outbound.trojan", displayName: "Trojan outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/trojan.html"),
+        XrayCapabilityDefinition(key: "outbound.vless", displayName: "VLESS outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/vless.html"),
+        XrayCapabilityDefinition(key: "outbound.vmess", displayName: "VMess outbound", kind: .outboundProtocol, rule: .supported(note: "Visible in official outbound protocol list."), docsPath: "/config/outbounds/vmess.html"),
+        XrayCapabilityDefinition(key: "outbound.anytls", displayName: "AnyTLS outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "V2rayU currently does not implement config generation for Xray-core AnyTLS outbound; automatically choosing sing-box."), docsPath: nil),
+        XrayCapabilityDefinition(key: "outbound.naive", displayName: "Naive outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "Xray-core/V2rayU currently does not implement config generation for naive outbound; automatically choosing sing-box."), docsPath: nil),
+        XrayCapabilityDefinition(key: "outbound.ssh", displayName: "SSH outbound", kind: .outboundProtocol, rule: XraySupportRule(status: .unsupported, legacyMin: nil, calendarMin: nil, removedAt: nil, note: "Xray-core does not support SSH outbound; automatically choosing sing-box."), docsPath: nil),
+        XrayCapabilityDefinition(key: "outbound.wireguard", displayName: "WireGuard outbound", kind: .outboundProtocol, rule: .supported(note: "Explicitly listed in current official outbound protocol list."), docsPath: "/config/outbounds/wireguard.html"),
+        XrayCapabilityDefinition(key: "outbound.hysteria", displayName: "Hysteria2 outbound", kind: .outboundProtocol,             rule: .supported(note: "Xray-core added hysteria2 outbound support in v26.1.23. Calendar versions < 26.1.23 are unsupported.", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(26, 1, 23)), docsPath: "/config/outbounds/hysteria.html"),
 
         // MARK: Transport methods
-        XrayCapabilityDefinition(key: "transport.raw", displayName: "RAW transport", kind: .transportMethod, rule: .supported(note: "当前官方 transport 主列表可见；RAW 为曾经 TCP transport 的新名称。"), docsPath: "/config/transports/raw.html"),
-        XrayCapabilityDefinition(key: "transport.tcpAlias", displayName: "TCP (RAW alias)", kind: .transportMethod, rule: .compatibility(note: "V2rayU 当前节点模型仍以 tcp 表示 RAW；官方当前文档使用 RAW 命名。"), docsPath: "/config/transports/raw.html"),
+        XrayCapabilityDefinition(key: "transport.raw", displayName: "RAW transport", kind: .transportMethod, rule: .supported(note: "Visible in current official transport mainline; RAW is the new name of the former TCP transport."), docsPath: "/config/transports/raw.html"),
+        XrayCapabilityDefinition(key: "transport.tcpAlias", displayName: "TCP (RAW alias)", kind: .transportMethod, rule: .compatibility(note: "V2rayU current node model uses tcp for RAW; official documentation uses RAW."), docsPath: "/config/transports/raw.html"),
         XrayCapabilityDefinition(
             key: "transport.xhttp",
             displayName: "XHTTP transport",
             kind: .transportMethod,
-            rule: .supported(note: "经兼容性测试验证，XHTTP 在 v24.10.31 及之后版本稳定可用；早期版本（v1.8.24/v24.9.30）的 XHTTP 实现存在启动超时缺陷，已从支持列表中排除。", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(24, 10, 31), removedAt: nil),
+            rule: .supported(note: "XHTTP is stable and usable in v24.10.31 and later; early versions (v1.8.24/v24.9.30) had startup timeout defects and are excluded from the support list.", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(24, 10, 31), removedAt: nil),
             docsPath: "/config/transports/xhttp.html",
             evidence: [
                 CapabilityEvidence(
                     id: "release-v25.4.30-xhttp-default-mode",
                     kind: "releaseNote",
-                    statement: "Xray-core v25.4.30 的 release note 已明确讨论 XHTTP 的默认行为变化，可确认 XHTTP 在新历版本线中已是实际存在且持续维护的 transport；这条证据用于支持功能存在与持续演进，不单独声明精确首发版本。",
+                    statement: "Xray-core v25.4.30 release notes discuss default behavior changes for XHTTP, confirming XHTTP exists and is maintained; this evidence supports feature existence and evolution without claiming an exact release version.",
                     sourceTitle: "Xray-core v25.4.30 release notes",
                     sourceURL: "https://github.com/XTLS/Xray-core/releases/tag/v25.4.30",
                     sourceVersion: "25.4.30",
                     sourceDate: "2025-04-30",
-                    quote: "XHTTP TLS 默认改为 packet-up，XHTTP REALITY 默认仍为 stream-one",
+                    quote: "XHTTP TLS default changed to packet-up, XHTTP REALITY default remains stream-one",
                     reviewedAt: "2026-05-18",
-                    note: "来自当前仓库内的 release 分析整理，原始来源为对应 GitHub release 页面。"
+                    note: "Compiled from release analysis in this repository, source is the corresponding GitHub release page."
                 )
             ]
         ),
-        XrayCapabilityDefinition(key: "transport.mkcp", displayName: "mKCP transport", kind: .transportMethod, rule: .supported(note: "Xray-core v26.2.6 起 mKCP 启动超时/端口不可用，疑似已移除或需要适配。遗留版本和 v26.1.23 及之前的日历版本均正常工作。", removedAt: XrayVersion(26, 2, 6)), docsPath: "/config/transports/mkcp.html"),
-        XrayCapabilityDefinition(key: "transport.grpc", displayName: "gRPC transport", kind: .transportMethod, rule: .supported(note: "当前官方 transport 主列表仍明确列出，因此 V2rayU 不再将其视为已下架功能。"), docsPath: "/config/transports/grpc.html"),
-        XrayCapabilityDefinition(key: "transport.websocket", displayName: "WebSocket transport", kind: .transportMethod, rule: .supported(note: "当前官方 transport 主列表仍明确列出，因此 V2rayU 不再将其视为已下架功能。"), docsPath: "/config/transports/websocket.html"),
-        XrayCapabilityDefinition(key: "transport.httpupgrade", displayName: "HTTPUpgrade transport", kind: .transportMethod, rule: .supported(note: "当前官方 transport 主列表明确列出。"), docsPath: "/config/transports/httpupgrade.html"),
-        XrayCapabilityDefinition(key: "transport.hysteria", displayName: "Hysteria2 transport", kind: .transportMethod,             rule: .supported(note: "Xray-core 在 v26.1.23 新增 hysteria2 transport 支持。日历版本 < 26.1.23 不支持。", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(26, 1, 23)), docsPath: "/config/transports/hysteria.html"),
+        XrayCapabilityDefinition(key: "transport.mkcp", displayName: "mKCP transport", kind: .transportMethod, rule: .supported(note: "Starting from Xray-core v26.2.6, mKCP startup times out or ports are unavailable, indicating it was removed or needs adaptation. Legacy versions and calendar versions <= 26.1.23 work normally.", removedAt: XrayVersion(26, 2, 6)), docsPath: "/config/transports/mkcp.html"),
+        XrayCapabilityDefinition(key: "transport.grpc", displayName: "gRPC transport", kind: .transportMethod, rule: .supported(note: "Still explicitly listed in the official transport mainline, so V2rayU does not consider it removed."), docsPath: "/config/transports/grpc.html"),
+        XrayCapabilityDefinition(key: "transport.websocket", displayName: "WebSocket transport", kind: .transportMethod, rule: .supported(note: "Still explicitly listed in the official transport mainline, so V2rayU does not consider it removed."), docsPath: "/config/transports/websocket.html"),
+        XrayCapabilityDefinition(key: "transport.httpupgrade", displayName: "HTTPUpgrade transport", kind: .transportMethod, rule: .supported(note: "Explicitly listed in current official transport mainline."), docsPath: "/config/transports/httpupgrade.html"),
+        XrayCapabilityDefinition(key: "transport.hysteria", displayName: "Hysteria2 transport", kind: .transportMethod,             rule: .supported(note: "Xray-core added hysteria2 transport support in v26.1.23. Calendar versions < 26.1.23 are unsupported.", legacyMin: XrayVersion(9, 9, 9), calendarMin: XrayVersion(26, 1, 23)), docsPath: "/config/transports/hysteria.html"),
 
         // MARK: Legacy or compatibility items
-        XrayCapabilityDefinition(key: "transport.h2", displayName: "HTTP/2 transport", kind: .transportMethod,             rule: .supported(note: "Xray-core v24.12.18 移除了 HTTP/2 transport，迁移至 XHTTP stream-one H2 & H3。旧版本（<24.12.18）仍支持 h2 transport。", removedAt: XrayVersion(24, 12, 18)), docsPath: "/config/transports/h2.html"),
-        XrayCapabilityDefinition(key: "transport.quic", displayName: "QUIC transport", kind: .transportMethod, rule: .legacy(note: "QUIC 不在当前官方 transport 主列表中，但站点仍保留历史页面；V2rayU 仅作历史兼容映射。"), docsPath: "/config/transports/quic.html"),
-        XrayCapabilityDefinition(key: "transport.domainsocket", displayName: "Domain Socket transport", kind: .transportMethod, rule: .compatibility(note: "当前官方 transport 主列表未单列 Domain Socket；V2rayU 仅按现有模型做兼容保留。"), docsPath: nil),
+        XrayCapabilityDefinition(key: "transport.h2", displayName: "HTTP/2 transport", kind: .transportMethod,             rule: .supported(note: "Xray-core v24.12.18 removed HTTP/2 transport, migrating to XHTTP stream-one H2 & H3. Older versions (<24.12.18) still support h2 transport.", removedAt: XrayVersion(24, 12, 18)), docsPath: "/config/transports/h2.html"),
+        XrayCapabilityDefinition(key: "transport.quic", displayName: "QUIC transport", kind: .transportMethod, rule: .legacy(note: "QUIC is not in the current official transport mainline, but the site retains the history page; V2rayU only maintains legacy mapping."), docsPath: "/config/transports/quic.html"),
+        XrayCapabilityDefinition(key: "transport.domainsocket", displayName: "Domain Socket transport", kind: .transportMethod, rule: .compatibility(note: "Domain Socket is not listed in the official transport mainline; V2rayU keeps compatibility mapping."), docsPath: nil),
 
         // MARK: Transport security / additional config
-        XrayCapabilityDefinition(key: "security.none", displayName: "No extra transport security", kind: .transportSecurity, rule: .compatibility(note: "无 TLS/REALITY 时的默认情况，不在官方 transport security 主列表单列。"), docsPath: nil),
-        XrayCapabilityDefinition(key: "security.reality", displayName: "REALITY", kind: .transportSecurity, rule: .supported(note: "当前官方 transport security 主列表明确列出。"), docsPath: "/config/transports/reality.html"),
-        XrayCapabilityDefinition(key: "security.tls", displayName: "TLS", kind: .transportSecurity, rule: .supported(note: "当前官方 transport security 主列表明确列出。"), docsPath: "/config/transports/tls.html"),
+        XrayCapabilityDefinition(key: "security.none", displayName: "No extra transport security", kind: .transportSecurity, rule: .compatibility(note: "Default scenario when no TLS/REALITY is configured; not listed in official transport security mainline."), docsPath: nil),
+        XrayCapabilityDefinition(key: "security.reality", displayName: "REALITY", kind: .transportSecurity, rule: .supported(note: "Explicitly listed in current official transport security mainline."), docsPath: "/config/transports/reality.html"),
+        XrayCapabilityDefinition(key: "security.tls", displayName: "TLS", kind: .transportSecurity, rule: .supported(note: "Explicitly listed in current official transport security mainline."), docsPath: "/config/transports/tls.html"),
         XrayCapabilityDefinition(
             key: "security.tls.allowInsecure",
             displayName: "TLS allowInsecure",
             kind: .transportSecurity,
-            rule: .removed(note: "Xray-core 自 26.1.31 移除 allowInsecure，并于 UTC 2026-06-01 00:00 起硬禁用；请改用 pinnedPeerCertSha256（应用会自动获取证书指纹），获取失败或 Hysteria2 将回退 Sing-Box。", removedAt: XrayVersion(26, 1, 31)),
+            rule: .removed(note: "Xray-core removed allowInsecure in 26.1.31 and hard-disabled it starting UTC 2026-06-01 00:00; use pinnedPeerCertSha256 instead (app automatically retrieves it). Failure or Hysteria2 falls back to Sing-Box.", removedAt: XrayVersion(26, 1, 31)),
             docsPath: "/config/transports/tls.html",
             evidence: [
                 CapabilityEvidence(
                     id: "release-v26.2.6-allowinsecure-removed",
                     kind: "releaseNote",
-                    statement: "Xray-core v26.2.6 release note 明确移除 allowInsecure，迁移到 pinnedPeerCertSha256 / verifyPeerCertByName，并设延时自动禁用至 UTC 2026-06-01。",
+                    statement: "Xray-core v26.2.6 release notes state allowInsecure is removed in favor of pinnedPeerCertSha256 / verifyPeerCertByName, with auto-disable by UTC 2026-06-01.",
                     sourceTitle: "Xray-core v26.2.6 release notes",
                     sourceURL: "https://github.com/XTLS/Xray-core/releases/tag/v26.2.6",
                     sourceVersion: "26.2.6",
                     sourceDate: "2026-02-06",
-                    quote: "TLS 移除了 allowInsecure 配置项，请使用 pinnedPeerCertSha256 和 verifyPeerCertByName 代替",
+                    quote: "TLS removed the allowInsecure option, please use pinnedPeerCertSha256 and verifyPeerCertByName instead",
                     reviewedAt: "2026-06-01",
-                    note: "首次移除见 v26.1.31；hy2 自签 + pinnedPeerCertSha256 失效见 issue #5655。"
+                    note: "First removed in v26.1.31; hy2 self-sign + pinnedPeerCertSha256 issue in #5655."
                 )
             ]
         ),
-        XrayCapabilityDefinition(key: "additional.finalmask", displayName: "FinalMask", kind: .additionalConfig, rule: .supported(note: "当前官方 additional config 主列表明确列出。"), docsPath: "/config/transports/finalmask.html"),
-        XrayCapabilityDefinition(key: "additional.sockopt", displayName: "Sockopt", kind: .additionalConfig, rule: .supported(note: "当前官方 additional config 主列表明确列出。"), docsPath: "/config/transports/sockopt.html"),
+        XrayCapabilityDefinition(key: "additional.finalmask", displayName: "FinalMask", kind: .additionalConfig, rule: .supported(note: "Explicitly listed in current official additional config mainline."), docsPath: "/config/transports/finalmask.html"),
+        XrayCapabilityDefinition(key: "additional.sockopt", displayName: "Sockopt", kind: .additionalConfig, rule: .supported(note: "Explicitly listed in current official additional config mainline."), docsPath: "/config/transports/sockopt.html"),
 
         // MARK: Flow - app-level compatibility notes
-        XrayCapabilityDefinition(key: "flow.xtls-rprx-vision", displayName: "xtls-rprx-vision flow", kind: .flow, rule: .compatibility(note: "Flow 属 VLESS/XTLS 细分配置，当前并不在官方 transport 列表单列，V2rayU 暂不基于 docs 对其做硬版本校验。"), docsPath: "/config/inbounds/vless.html"),
-        XrayCapabilityDefinition(key: "flow.xtls-rprx-vision-udp443", displayName: "xtls-rprx-vision-udp443 flow", kind: .flow, rule: .compatibility(note: "Flow 属 VLESS/XTLS 细分配置，当前并不在官方 transport 列表单列，V2rayU 暂不基于 docs 对其做硬版本校验。"), docsPath: "/config/inbounds/vless.html")
+        XrayCapabilityDefinition(key: "flow.xtls-rprx-vision", displayName: "xtls-rprx-vision flow", kind: .flow, rule: .compatibility(note: "Flow is a sub-config of VLESS/XTLS and is not listed in official transports; V2rayU does not enforce version bounds based on docs."), docsPath: "/config/inbounds/vless.html"),
+        XrayCapabilityDefinition(key: "flow.xtls-rprx-vision-udp443", displayName: "xtls-rprx-vision-udp443 flow", kind: .flow, rule: .compatibility(note: "Flow is a sub-config of VLESS/XTLS and is not listed in official transports; V2rayU does not enforce version bounds based on docs."), docsPath: "/config/inbounds/vless.html")
     ]
 
     static func allCapabilities() -> [XrayCapabilityDefinition] {
@@ -865,11 +920,11 @@ enum SingboxFallbackResolver {
         }
 
         if profile.network == .kcp {
-            reasons.append("当前节点使用 KCP 传输，Sing-Box 不支持 KCP 协议，不能自动回退。")
+            reasons.append("Current node uses KCP transport; Sing-Box does not support KCP and cannot automatically fall back.")
         }
 
         if profile.protocol == .vmess && profile.alterId > 0 {
-            reasons.append("当前节点使用 VMess alterId > 0（旧版 MD5 认证），与 Sing-Box 不兼容，请将 alterId 改为 0（AEAD 模式）。")
+            reasons.append("Current node uses VMess with alterId > 0 (legacy MD5 authentication), which is incompatible with Sing-Box; please change alterId to 0 (AEAD mode).")
         }
 
         return unique(reasons)
@@ -880,7 +935,7 @@ enum SingboxFallbackResolver {
             return
         }
         guard let capability = capabilities[requirement.key] else {
-            reasons.append("Sing-Box 功能支持规则未声明 [\(requirement.kind.rawValue)] \(requirement.displayName)，无法安全自动回退。")
+            reasons.append("Sing-Box capability rules do not declare [\(requirement.kind.rawValue)] \(requirement.displayName), cannot safely automatically fall back.")
             return
         }
         reasons.append(contentsOf: Self.reasons(for: capability, version: version))
@@ -898,7 +953,7 @@ enum SingboxFallbackResolver {
             case .supported, .advisory:
                 break
             case .unsupported:
-                reasons.append("Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：\(appSupport.note)")
+                reasons.append("Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): \(appSupport.note)")
             }
         }
 
@@ -911,13 +966,13 @@ enum SingboxFallbackResolver {
 
         if minimumVersion != nil || removedAt != nil {
             guard let version else {
-                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：无法识别当前 sing-box 版本，不能确认版本边界。\(capability.rule.note)"
+                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Cannot identify current sing-box version, unable to determine version bounds. \(capability.rule.note)"
             }
             if let removedAt, version >= removedAt {
-                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：当前版本 \(version.description) 已落入配置声明的受限区间（>= \(removedAt.description)）。\(capability.rule.note)"
+                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Current version \(version.description) falls within the declared restricted range (>= \(removedAt.description)). \(capability.rule.note)"
             }
             if let minimumVersion, version < minimumVersion {
-                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：需要版本 >= \(minimumVersion.description)。\(capability.rule.note)"
+                return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Requires version >= \(minimumVersion.description). \(capability.rule.note)"
             }
         }
 
@@ -925,11 +980,11 @@ enum SingboxFallbackResolver {
         case .supported, .legacy, .compatibility:
             return nil
         case .unsupported:
-            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：当前状态为 unsupported，不能作为安全自动回退目标。\(capability.rule.note)"
+            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Current status is unsupported; cannot serve as a safe auto-fallback target. \(capability.rule.note)"
         case .removed:
-            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：当前状态为 removed，不作为安全自动回退目标。\(capability.rule.note)"
+            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Current status is removed; cannot serve as a safe auto-fallback target. \(capability.rule.note)"
         case .pendingReview:
-            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName)：当前状态为 pendingReview，缺少足够依据确认自动回退安全性。\(capability.rule.note)"
+            return "Sing-Box [\(capability.kind.rawValue)] \(capability.displayName): Current status is pendingReview; missing sufficient evidence to verify auto-fallback safety. \(capability.rule.note)"
         }
     }
 
@@ -1021,32 +1076,32 @@ enum SingboxFallbackResolver {
 
         switch profile.protocol {
         case .http:
-            reasons.append("当前节点使用 HTTP outbound，现有自动回退逻辑无法等价转换到 Sing-Box。")
+            reasons.append("Current node uses HTTP outbound; existing auto-fallback logic cannot translate this equivalently to Sing-Box.")
         case .dns:
-            reasons.append("当前节点使用 DNS outbound，现有自动回退逻辑无法等价转换到 Sing-Box。")
+            reasons.append("Current node uses DNS outbound; existing auto-fallback logic cannot translate this equivalently to Sing-Box.")
         default:
             break
         }
 
         switch profile.network {
         case .xhttp:
-            reasons.append("当前节点使用 xhttp 传输，Sing-Box 回退路径暂无可用等价实现，不能直接自动切换。")
+            reasons.append("Current node uses xhttp transport; there is no equivalent implementation for Sing-Box fallback yet.")
         case .kcp:
-            reasons.append("当前节点使用 KCP 传输，Sing-Box 不支持 KCP 协议，不能自动回退。")
+            reasons.append("Current node uses KCP transport; Sing-Box does not support KCP and cannot automatically fall back.")
         default:
             break
         }
 
         if profile.security == .xtls {
-            reasons.append("当前节点使用 XTLS，现有自动回退逻辑未实现对应的 Sing-Box 配置转换。")
+            reasons.append("Current node uses XTLS; existing auto-fallback logic has not implemented equivalent Sing-Box configuration translation.")
         }
 
         if profile.network == .tcp && profile.headerType == .http {
-            reasons.append("当前节点使用 TCP + HTTP 伪装，现有自动回退逻辑未实现对应的 Sing-Box 配置转换。")
+            reasons.append("Current node uses TCP + HTTP disguise; existing auto-fallback logic has not implemented equivalent Sing-Box configuration translation.")
         }
 
         if profile.protocol == .vmess && profile.alterId > 0 {
-            reasons.append("当前节点使用 VMess alterId > 0（旧版 MD5 认证），与 Sing-Box 不兼容，请将 alterId 改为 0（AEAD 模式）。")
+            reasons.append("Current node uses VMess with alterId > 0 (legacy MD5 authentication), which is incompatible with Sing-Box; please change alterId to 0 (AEAD mode).")
         }
 
         return reasons
@@ -1054,7 +1109,7 @@ enum SingboxFallbackResolver {
 }
 
 enum XrayCompatibilityResolver {
-    private static let capabilityRulesNotice = "当前兼容判定优先使用本地功能支持规则配置；若本地未提供，则回退到内置 Swift 默认值。"
+    private static let capabilityRulesNotice = "Compatibility checks prioritize local capability rule configurations; if unavailable, they fall back to built-in Swift defaults."
     private static let defaultLatestReviewedCalendarVersion = XrayVersion(26, 3, 27)
 
     static func currentVersion() -> XrayVersion? {
@@ -1075,7 +1130,7 @@ enum XrayCompatibilityResolver {
         guard let version, version.isCalendarStyle, version > latestReviewedCalendarVersion else {
             return nil
         }
-        return "当前 Xray-core 版本 \(version.description) 高于功能支持规则最近一次核对的日期版本 \(latestReviewedCalendarVersion.description)。本次仍按配置中的开区间规则判定；如上游后续发生功能变更，需要更新功能支持规则配置。"
+        return "Current Xray-core version \(version.description) is higher than the latest reviewed capability rules version \(latestReviewedCalendarVersion.description). The check is still performed using open-interval rules; if upstream introduces changes in the future, capability rules will need to be updated."
     }
 
     static func fullSupportList() -> [XrayCapabilityDefinition] {
@@ -1113,14 +1168,14 @@ enum XrayCompatibilityResolver {
             if fallbackReasons.isEmpty {
                 return singboxFallbackDecision(for: profile, issues: issues)
             }
-            let warningMessage = "当前节点与已安装的 Xray-core \(shortVersion) 存在以下兼容性提示：\n\n\(issueText)\n\n本次仍继续使用 Xray-core 启动。\n\n\(capabilityRulesNotice)\(futureVersionText)"
+            let warningMessage = "The current node has the following compatibility notices with the installed Xray-core \(shortVersion):\n\n\(issueText)\n\nStartup will continue using Xray-core.\n\n\(capabilityRulesNotice)\(futureVersionText)"
             return XrayCoreCompatibilityDecision(coreType: .XrayCore, warningMessage: warningMessage, issues: issues, canLaunch: true)
         }
 
         let fallbackReasons = SingboxFallbackCompatibility.incompatibilityReasons(for: profile)
         if !fallbackReasons.isEmpty {
-            let fallbackText = fallbackReasons.map { "• [回退受限] \($0)" }.joined(separator: "\n")
-            let warningMessage = "当前节点与已安装的 Xray-core \(shortVersion) 存在以下不兼容项：\n\n\(issueText)\n\n此外，当前节点不能自动回退到 Sing-Box：\n\n\(fallbackText)\n\n请升级 Xray-core，或调整节点配置后重试。\n\n\(capabilityRulesNotice)\(futureVersionText)"
+            let fallbackText = fallbackReasons.map { "• [Fallback Restricted] \($0)" }.joined(separator: "\n")
+            let warningMessage = "The current node has the following incompatibilities with the installed Xray-core \(shortVersion):\n\n\(issueText)\n\nAdditionally, the current node cannot automatically fall back to Sing-Box:\n\n\(fallbackText)\n\nPlease upgrade Xray-core or adjust node configurations and try again.\n\n\(capabilityRulesNotice)\(futureVersionText)"
             return XrayCoreCompatibilityDecision(coreType: .XrayCore, warningMessage: warningMessage, issues: issues, canLaunch: false)
         }
 
@@ -1130,7 +1185,7 @@ enum XrayCompatibilityResolver {
     private static func singboxFallbackDecision(for profile: ProfileEntity, issues: [XrayCompatibilityIssue]) -> XrayCoreCompatibilityDecision {
         var warningMessage: String?
         if profile.protocol == .vmess && profile.alterId > 0 {
-            warningMessage = "VMess alterId > 0（旧版 MD5 认证）与 sing-box 不兼容，请将 alterId 改为 0（AEAD 模式）"
+            warningMessage = "VMess alterId > 0 (legacy MD5 authentication) is incompatible with sing-box; please change alterId to 0 (AEAD mode)"
         }
         return XrayCoreCompatibilityDecision(coreType: .SingBox, warningMessage: warningMessage, issues: issues, canLaunch: true)
     }
@@ -1150,19 +1205,19 @@ enum XrayCompatibilityResolver {
         let blockingIssues = issues.filter(\.isBlocking)
 
         if blockingIssues.isEmpty {
-            let warningMessage = "当前节点已手动选择 Xray-core；与已安装的 Xray-core \(shortVersion) 存在以下兼容性提示：\n\n\(issueText)\n\n本次仍继续使用 Xray-core 启动。\n\n\(capabilityRulesNotice)\(futureVersionText)"
+            let warningMessage = "The current node is configured to manually use Xray-core; there are compatibility notices with the installed Xray-core \(shortVersion):\n\n\(issueText)\n\nStartup will continue using Xray-core.\n\n\(capabilityRulesNotice)\(futureVersionText)"
             return XrayCoreCompatibilityDecision(coreType: .XrayCore, warningMessage: warningMessage, issues: issues, canLaunch: true)
         }
 
-        let warningMessage = "当前节点已手动选择 Xray-core，但与已安装的 Xray-core \(shortVersion) 存在以下不兼容项：\n\n\(issueText)\n\n请切换为 Auto/Sing-Box，升级 Xray-core，或调整节点配置后重试。\n\n\(capabilityRulesNotice)\(futureVersionText)"
+        let warningMessage = "The current node is configured to manually use Xray-core, but there are incompatibilities with the installed Xray-core \(shortVersion):\n\n\(issueText)\n\nPlease switch to Auto/Sing-Box, upgrade Xray-core, or adjust node configurations and try again.\n\n\(capabilityRulesNotice)\(futureVersionText)"
         return XrayCoreCompatibilityDecision(coreType: .XrayCore, warningMessage: warningMessage, issues: issues, canLaunch: false)
     }
 
     private static func singboxDecision(for profile: ProfileEntity) -> XrayCoreCompatibilityDecision {
         let fallbackReasons = SingboxFallbackCompatibility.incompatibilityReasons(for: profile)
         guard fallbackReasons.isEmpty else {
-            let fallbackText = fallbackReasons.map { "• [不兼容] \($0)" }.joined(separator: "\n")
-            let warningMessage = "当前节点已手动选择 Sing-Box，但依据功能支持规则检测到以下不兼容项：\n\n\(fallbackText)\n\n请切换为 Auto/Xray，更新 Sing-Box 功能支持规则，或调整节点配置后重试。\n\n\(capabilityRulesNotice)"
+            let fallbackText = fallbackReasons.map { "• [Incompatible] \($0)" }.joined(separator: "\n")
+            let warningMessage = "The current node is configured to manually use Sing-Box, but incompatibilities were detected according to the capability rules:\n\n\(fallbackText)\n\nPlease switch to Auto/Xray, update Sing-Box capability rules, or adjust node configurations and try again.\n\n\(capabilityRulesNotice)"
             return XrayCoreCompatibilityDecision(coreType: .SingBox, warningMessage: warningMessage, issues: [], canLaunch: false)
         }
 
@@ -1199,7 +1254,7 @@ enum XrayCompatibilityResolver {
             if let definition = XraySupportCatalog.definition(forSecurity: profile.security) {
                 issues.append(XrayCompatibilityIssue(
                     capability: definition,
-                    availability: .unsupported(reason: "Xray-core 的 Shadowsocks 协议不支持 \(definition.displayName) 传输层安全（TLS/REALITY 仅适用于 VMess/VLESS/Trojan 等协议），将自动回退到 Sing-Box。")
+                    availability: .unsupported(reason: "Shadowsocks in Xray-core does not support \(definition.displayName) transport security (TLS/REALITY are only applicable to protocols like VMess/VLESS/Trojan), falling back to Sing-Box.")
                 ))
             }
         }
@@ -1220,18 +1275,18 @@ enum XrayCompatibilityResolver {
         // 仅 >= 26.1.31 的核心受影响；旧核心仍支持 allowInsecure。版本未知时按现代核心处理。
         if let version, version < xrayAllowInsecureRemovedVersion { return nil }
         guard let definition = XraySupportCatalog.capability(forKey: "security.tls.allowInsecure") else { return nil }
-        let versionText = version?.description ?? "(未知版本)"
+        let versionText = version?.description ?? "(unknown version)"
 
         if profile.protocol == .hysteria2 {
             return XrayCompatibilityIssue(capability: definition, availability: .unsupported(
-                reason: "Hysteria2 在 Xray-core \(versionText) 无法用 allowInsecure 跳过证书校验（26.1.31 已移除），且无法自动获取其 QUIC 证书指纹、Xray hy2 自签 + pinnedPeerCertSha256 当前不可用（#5655）；将回退 Sing-Box。"))
+                reason: "Hysteria2 in Xray-core \(versionText) cannot use allowInsecure to bypass certificate validation (removed in 26.1.31), certificate pinning is unavailable, and Xray hy2 self-signing + pinnedPeerCertSha256 is currently broken (#5655); falling back to Sing-Box."))
         }
 
         let hasPin = !profile.pinnedPeerCertSha256.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         if hasPin { return nil }
 
         return XrayCompatibilityIssue(capability: definition, availability: .unsupported(
-            reason: "allowInsecure 已在 Xray-core 26.1.31 移除；未能自动获取服务器证书指纹（pinnedPeerCertSha256），将回退 Sing-Box。请确认节点可达后重试 Ping 以重新获取。"))
+            reason: "allowInsecure has been removed in Xray-core 26.1.31; failed to automatically retrieve the server certificate fingerprint (pinnedPeerCertSha256). Falling back to Sing-Box. Please verify the node is reachable and ping again to retrieve the fingerprint."))
     }
 }
 

@@ -197,7 +197,7 @@ struct CoreCapabilityRulesTests {
     @Test func singboxFallbackForHttpHeader() {
         let profile = ProfileEntity(protocol: .vmess, address: "x.com", port: 443, password: "uuid", network: .tcp, headerType: .http, security: .tls)
         let reasons = SingboxFallbackResolver.incompatibilityReasons(for: profile)
-        let hasHeaderReason = reasons.contains { $0.contains("HTTP") || $0.contains("伪装") }
+        let hasHeaderReason = reasons.contains { $0.contains("HTTP") || $0.contains("disguise") }
         #expect(hasHeaderReason)
     }
 

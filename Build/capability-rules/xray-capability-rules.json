@@ -10,7 +10,7 @@
       "docs_path": "/config/inbounds/tunnel.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -20,7 +20,7 @@
       "docs_path": "/config/inbounds/http.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -30,13 +30,13 @@
       "rule": {
         "type": "supported",
         "calendar_min": "24.12.31",
-        "note": "Xray-core 官方入站协议列表未列出 mixed 类型，但代码实现自 v24.12.31 起以 socks 别名形式支持（commit 5af9068）。"
+        "note": "Xray-core official inbound protocol list does not list mixed type, but the code has supported it as a socks alias since v24.12.31 (commit 5af9068)."
       },
       "evidence": [
         {
           "id": "batch-test-mixed-inbound-v24.12.31",
           "kind": "batchTest",
-          "statement": "经 Build/tests/test-mixed-inbound.sh 批量测试验证：v1.8.4～v24.12.18 报 unknown config id: mixed，v24.12.31+ 正常接受。",
+          "statement": "Verified via Build/tests/test-mixed-inbound.sh: v1.8.4~v24.12.18 reports unknown config id: mixed, v24.12.31+ accepts it.",
           "source_title": "V2rayU mixed inbound batch test",
           "source_url": "https://github.com/yanue/V2rayU",
           "source_version": null,
@@ -54,7 +54,7 @@
       "docs_path": "/config/inbounds/shadowsocks.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -64,7 +64,7 @@
       "docs_path": "/config/inbounds/socks.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -74,7 +74,7 @@
       "docs_path": "/config/inbounds/trojan.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -84,7 +84,7 @@
       "docs_path": "/config/inbounds/vless.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -94,7 +94,7 @@
       "docs_path": "/config/inbounds/vmess.html",
       "rule": {
         "type": "supported",
-        "note": "官方入站协议列表可见。"
+        "note": "Visible in official inbound protocol list."
       }
     },
     {
@@ -104,7 +104,7 @@
       "docs_path": "/config/inbounds/wireguard.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方入站协议列表明确列出。"
+        "note": "Explicitly listed in current official inbound protocol list."
       }
     },
     {
@@ -114,7 +114,7 @@
       "docs_path": "/config/inbounds/hysteria.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方入站协议列表明确列出。"
+        "note": "Explicitly listed in current official inbound protocol list."
       }
     },
     {
@@ -124,7 +124,7 @@
       "docs_path": "/config/inbounds/tun.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方入站协议列表明确列出。"
+        "note": "Explicitly listed in current official inbound protocol list."
       }
     },
     {
@@ -134,7 +134,7 @@
       "docs_path": "/config/outbounds/blackhole.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -144,7 +144,7 @@
       "docs_path": "/config/outbounds/dns.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -154,7 +154,7 @@
       "docs_path": "/config/outbounds/freedom.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -164,7 +164,7 @@
       "docs_path": "/config/outbounds/http.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -174,7 +174,7 @@
       "docs_path": "/config/outbounds/loopback.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表明确列出。"
+        "note": "Explicitly listed in current official outbound protocol list."
       }
     },
     {
@@ -184,7 +184,7 @@
       "docs_path": "/config/outbounds/shadowsocks.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -194,7 +194,7 @@
       "docs_path": "/config/outbounds/socks.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -204,7 +204,7 @@
       "docs_path": "/config/outbounds/trojan.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -214,7 +214,7 @@
       "docs_path": "/config/outbounds/vless.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -224,7 +224,7 @@
       "docs_path": "/config/outbounds/vmess.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表可见。"
+        "note": "Visible in official outbound protocol list."
       }
     },
     {
@@ -234,7 +234,7 @@
       "docs_path": null,
       "rule": {
         "type": "unsupported",
-        "note": "V2rayU 当前未实现 Xray-core AnyTLS outbound 配置生成；按 capability rule 自动选择 sing-box。"
+        "note": "V2rayU currently does not implement config generation for Xray-core AnyTLS outbound; automatically choosing sing-box."
       }
     },
     {
@@ -244,7 +244,7 @@
       "docs_path": null,
       "rule": {
         "type": "unsupported",
-        "note": "Xray-core/V2rayU 当前没有 naive outbound 配置生成；按 capability rule 自动选择 sing-box。"
+        "note": "Xray-core/V2rayU currently does not implement config generation for naive outbound; automatically choosing sing-box."
       }
     },
     {
@@ -254,7 +254,7 @@
       "docs_path": null,
       "rule": {
         "type": "unsupported",
-        "note": "Xray-core 不支持 SSH 出站；按 capability rule 自动选择 sing-box。"
+        "note": "Xray-core does not support SSH outbound; automatically choosing sing-box."
       }
     },
     {
@@ -264,7 +264,7 @@
       "docs_path": "/config/outbounds/wireguard.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方出站协议列表明确列出。"
+        "note": "Explicitly listed in current official outbound protocol list."
       }
     },
     {
@@ -276,7 +276,7 @@
         "type": "supported",
         "legacy_min": "9.9.9",
         "calendar_min": "26.1.23",
-        "note": "Xray-core 在 v26.1.23 新增 hysteria2 outbound 支持。日历版本 < 26.1.23 不支持。"
+        "note": "Xray-core added hysteria2 outbound support in v26.1.23. Calendar versions < 26.1.23 are unsupported."
       }
     },
     {
@@ -286,7 +286,7 @@
       "docs_path": "/config/transports/raw.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport 主列表可见；RAW 为曾经 TCP transport 的新名称。"
+        "note": "Visible in current official transport mainline; RAW is the new name of the former TCP transport."
       }
     },
     {
@@ -296,7 +296,7 @@
       "docs_path": "/config/transports/raw.html",
       "rule": {
         "type": "compatibility",
-        "note": "V2rayU 当前节点模型仍以 tcp 表示 RAW；官方当前文档使用 RAW 命名。"
+        "note": "V2rayU current node model uses tcp for RAW; official documentation uses RAW."
       }
     },
     {
@@ -308,20 +308,20 @@
         "type": "supported",
         "legacy_min": "9.9.9",
         "calendar_min": "24.10.31",
-        "note": "经兼容性测试验证，XHTTP 在 v24.10.31 及之后版本稳定可用；早期版本（v1.8.24/v24.9.30）的 XHTTP 实现存在启动超时缺陷，已从支持列表中排除。"
+        "note": "XHTTP is stable and usable in v24.10.31 and later; early versions (v1.8.24/v24.9.30) had startup timeout defects and are excluded from the support list."
       },
       "evidence": [
         {
           "id": "release-v25.4.30-xhttp-default-mode",
           "kind": "releaseNote",
-          "statement": "Xray-core v25.4.30 的 release note 已明确讨论 XHTTP 的默认行为变化，可确认 XHTTP 在新历版本线中已是实际存在且持续维护的 transport；这条证据用于支持功能存在与持续演进，不单独声明精确首发版本。",
+          "statement": "Xray-core v25.4.30 release notes discuss default behavior changes for XHTTP, confirming XHTTP exists and is maintained; this evidence supports feature existence and evolution without claiming an exact release version.",
           "source_title": "Xray-core v25.4.30 release notes",
           "source_url": "https://github.com/XTLS/Xray-core/releases/tag/v25.4.30",
           "source_version": "25.4.30",
           "source_date": "2025-04-30",
-          "quote": "XHTTP TLS 默认改为 packet-up，XHTTP REALITY 默认仍为 stream-one",
+          "quote": "XHTTP TLS default changed to packet-up, XHTTP REALITY default remains stream-one",
           "reviewed_at": "2026-05-18",
-          "note": "来源线索整理自仓库内 Docs/XrayReleaseFeatureAnalysis.md，对应原始证据为该 GitHub release 页面。"
+          "note": "Compiled from release analysis in this repository, source is the corresponding GitHub release page."
         }
       ]
     },
@@ -333,20 +333,20 @@
       "rule": {
         "type": "supported",
         "removed_at": "26.2.6",
-        "note": "Xray-core v26.2.6 起 mKCP 启动超时/端口不可用，疑似已移除或需要适配。遗留版本和 v26.1.23 及之前的日历版本均正常工作。"
+        "note": "Starting from Xray-core v26.2.6, mKCP startup times out or ports are unavailable, indicating it was removed or needs adaptation. Legacy versions and calendar versions <= 26.1.23 work normally."
       },
       "evidence": [
         {
           "id": "transport.mkcp.compatibility",
           "kind": "compatibility_test",
-          "statement": "兼容性测试: v26.2.6 及之后 mKCP 端口不可用",
+          "statement": "Compatibility test: mKCP ports are unavailable since v26.2.6",
           "source_title": "",
           "source_url": "",
           "source_version": null,
           "source_date": "2026-06-10",
           "quote": "",
           "reviewed_at": null,
-          "note": "全版本测试显示 v1.8.0 到 v26.1.23 均正常，v26.2.6 开始无法启动监听。"
+          "note": "All-version testing shows v1.8.0 to v26.1.23 work normally; fails to start listening starting v26.2.6."
         }
       ]
     },
@@ -357,7 +357,7 @@
       "docs_path": "/config/transports/grpc.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport 主列表仍明确列出，因此 V2rayU 不再将其视为已下架功能。"
+        "note": "Still explicitly listed in the official transport mainline, so V2rayU does not consider it removed."
       }
     },
     {
@@ -367,7 +367,7 @@
       "docs_path": "/config/transports/websocket.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport 主列表仍明确列出，因此 V2rayU 不再将其视为已下架功能。"
+        "note": "Still explicitly listed in the official transport mainline, so V2rayU does not consider it removed."
       }
     },
     {
@@ -377,7 +377,7 @@
       "docs_path": "/config/transports/httpupgrade.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport 主列表明确列出。"
+        "note": "Explicitly listed in current official transport mainline."
       }
     },
     {
@@ -389,7 +389,7 @@
         "type": "supported",
         "legacy_min": "9.9.9",
         "calendar_min": "26.1.23",
-        "note": "Xray-core 在 v26.1.23 新增 hysteria2 transport 支持。日历版本 < 26.1.23 不支持。"
+        "note": "Xray-core added hysteria2 transport support in v26.1.23. Calendar versions < 26.1.23 are unsupported."
       }
     },
     {
@@ -400,7 +400,7 @@
       "rule": {
         "type": "supported",
         "removed_at": "24.12.18",
-        "note": "Xray-core v24.12.18 移除了 HTTP/2 transport，迁移至 XHTTP stream-one H2 & H3。旧版本（<24.12.18）仍支持 h2 transport。"
+        "note": "Xray-core v24.12.18 removed HTTP/2 transport, migrating to XHTTP stream-one H2 & H3. Older versions (<24.12.18) still support h2 transport."
       }
     },
     {
@@ -410,7 +410,7 @@
       "docs_path": "/config/transports/quic.html",
       "rule": {
         "type": "legacy",
-        "note": "QUIC 不在当前官方 transport 主列表中，但站点仍保留历史页面；V2rayU 仅作历史兼容映射。"
+        "note": "QUIC is not in the current official transport mainline, but the site retains the history page; V2rayU only maintains legacy mapping."
       }
     },
     {
@@ -420,7 +420,7 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "当前官方 transport 主列表未单列 Domain Socket；V2rayU 仅按现有模型做兼容保留。"
+        "note": "Domain Socket is not listed in the official transport mainline; V2rayU keeps compatibility mapping."
       }
     },
     {
@@ -430,7 +430,7 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "无 TLS/REALITY 时的默认情况，不在官方 transport security 主列表单列。"
+        "note": "Default scenario when no TLS/REALITY is configured; not listed in official transport security mainline."
       }
     },
     {
@@ -440,7 +440,7 @@
       "docs_path": "/config/transports/reality.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport security 主列表明确列出。"
+        "note": "Explicitly listed in current official transport security mainline."
       }
     },
     {
@@ -450,7 +450,7 @@
       "docs_path": "/config/transports/tls.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 transport security 主列表明确列出。"
+        "note": "Explicitly listed in current official transport security mainline."
       }
     },
     {
@@ -460,7 +460,7 @@
       "docs_path": "/config/transports/finalmask.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 additional config 主列表明确列出。"
+        "note": "Explicitly listed in current official additional config mainline."
       }
     },
     {
@@ -470,7 +470,7 @@
       "docs_path": "/config/transports/sockopt.html",
       "rule": {
         "type": "supported",
-        "note": "当前官方 additional config 主列表明确列出。"
+        "note": "Explicitly listed in current official additional config mainline."
       }
     },
     {
@@ -480,7 +480,7 @@
       "docs_path": "/config/inbounds/vless.html",
       "rule": {
         "type": "compatibility",
-        "note": "Flow 属 VLESS/XTLS 细分配置，当前并不在官方 transport 列表单列，V2rayU 暂不基于 docs 对其做硬版本校验。"
+        "note": "Flow is a sub-config of VLESS/XTLS and is not listed in official transports; V2rayU does not enforce version bounds based on docs."
       }
     },
     {
@@ -490,7 +490,7 @@
       "docs_path": "/config/inbounds/vless.html",
       "rule": {
         "type": "compatibility",
-        "note": "Flow 属 VLESS/XTLS 细分配置，当前并不在官方 transport 列表单列，V2rayU 暂不基于 docs 对其做硬版本校验。"
+        "note": "Flow is a sub-config of VLESS/XTLS and is not listed in official transports; V2rayU does not enforce version bounds based on docs."
       }
     }
   ]

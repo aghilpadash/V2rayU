@@ -7,27 +7,16 @@
 
 import SwiftUI
 
-enum Language: String, CaseIterable, Identifiable { // 添加 Identifiable
-    var id: Self { self } // 使枚举可用于 ForEach
+enum Language: String, CaseIterable, Identifiable {
+    var id: Self { self }
     case en = "English"
-    case zhHans = "Simplified Chinese"
-    case zhHant = "Traditional Chinese"
 
     var localeIdentifier: String {
-        switch self {
-        case .en: return "en"
-        case .zhHans: return "zh-Hans"
-        case .zhHant: return "zh-HK"
-        }
+        return "en"
     }
 
     init(localeIdentifier: String) {
-        switch localeIdentifier {
-        case "en": self = .en
-        case "zh-Hans": self = .zhHans
-        case "zh-HK": self = .zhHant
-        default: self = .en
-        }
+        self = .en
     }
 }
 
@@ -53,15 +42,10 @@ class LanguageManager: ObservableObject {
     @Published private(set) var currentLocale: Locale
 
     private init() {
-        // 初始化时从 UserDefaults 读取语言
-        let storedLocaleIdentifier = UserDefaults.standard.stringArray(forKey: "AppleLanguages")?.first ?? "en"
-        let lang = Language(localeIdentifier: storedLocaleIdentifier)
+        self.selectedLanguage = .en
+        self.currentLocale = Locale(identifier: "en")
 
-        self.selectedLanguage = lang
-        self.currentLocale = Locale(identifier: storedLocaleIdentifier)
-
-        // 初始化时只加载 bundle，不触发 UI 更新，避免循环依赖
-        if let path = Bundle.main.path(forResource: lang.localeIdentifier, ofType: "lproj"),
+        if let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
            let bundle = Bundle(path: path) {
             self.languageBundle = bundle
         } else {

@@ -190,7 +190,7 @@ class SingboxConfigHandler {
             migrateBlockOutboundToAction(&routeRules)
             self.singbox.outbounds.removeAll { $0.type == "block" }
         }
-        routeRules.append(RouteRule(outbound: "proxy", rule_set: ["geoip-cn"], invert: true))
+        routeRules.append(RouteRule(outbound: "proxy", geoip: ["cn"], invert: true))
         self.singbox.route.rules = routeRules
         self.singbox.applyBundledRuleSets()
         self.singbox.experimental = ExperimentalConfig(
@@ -278,7 +278,7 @@ class SingboxConfigHandler {
                 migrateBlockOutboundToAction(&routeRules)
                 self.singbox.outbounds.removeAll { $0.type == "block" }
             }
-            routeRules.append(RouteRule(outbound: "proxy", rule_set: ["geoip-cn"], invert: true))
+            routeRules.append(RouteRule(outbound: "proxy", geoip: ["cn"], invert: true))
             self.singbox.route.rules = routeRules
             self.singbox.applyBundledRuleSets()
         }

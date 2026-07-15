@@ -9,11 +9,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "V2rayU 当前将 freedom 映射为 sing-box direct 出站。"
+        "note": "V2rayU currently maps freedom to sing-box direct outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器直接输出 direct。"
+        "note": "Current generator directly outputs direct."
       }
     },
     {
@@ -23,11 +23,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "V2rayU 当前将 blackhole 映射为 sing-box block 出站。"
+        "note": "V2rayU currently maps blackhole to sing-box block outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器直接输出 block。"
+        "note": "Current generator directly outputs block."
       }
     },
     {
@@ -37,11 +37,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 SOCKS 出站功能处理。"
+        "note": "Current fallback rules handle SOCKS outbound as regular sing-box SOCKS outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 socks 出站。"
+        "note": "Current generator has implemented SOCKS outbound."
       }
     },
     {
@@ -51,11 +51,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 Shadowsocks 出站功能处理。"
+        "note": "Current fallback rules handle Shadowsocks outbound as regular sing-box Shadowsocks outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 shadowsocks 出站。"
+        "note": "Current generator has implemented Shadowsocks outbound."
       }
     },
     {
@@ -65,11 +65,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 VMess 出站功能处理。"
+        "note": "Current fallback rules handle VMess outbound as regular sing-box VMess outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 vmess 出站。"
+        "note": "Current generator has implemented VMess outbound."
       }
     },
     {
@@ -79,11 +79,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 VLESS 出站功能处理。"
+        "note": "Current fallback rules handle VLESS outbound as regular sing-box VLESS outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 vless 出站。"
+        "note": "Current generator has implemented VLESS outbound."
       }
     },
     {
@@ -93,11 +93,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 Trojan 出站功能处理。"
+        "note": "Current fallback rules handle Trojan outbound as regular sing-box Trojan outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 trojan 出站。"
+        "note": "Current generator has implemented Trojan outbound."
       }
     },
     {
@@ -107,11 +107,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box AnyTLS 出站功能处理。"
+        "note": "Current fallback rules handle AnyTLS outbound as regular sing-box AnyTLS outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 anytls 出站。"
+        "note": "Current generator has implemented AnyTLS outbound."
       }
     },
     {
@@ -122,11 +122,11 @@
       "rule": {
         "type": "supported",
         "legacy_min": "1.13.0",
-        "note": "Naive outbound 需要 sing-box >= 1.13.0。"
+        "note": "Naive outbound requires sing-box >= 1.13.0."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 naive 出站。"
+        "note": "Current generator has implemented naive outbound."
       }
     },
     {
@@ -141,7 +141,7 @@
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 ssh 出站。"
+        "note": "Current generator has implemented SSH outbound."
       }
     },
     {
@@ -151,11 +151,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "Sing-Box 原生支持 hysteria2 出站。"
+        "note": "Sing-Box natively supports hysteria2 outbound."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 hysteria2 出站。"
+        "note": "Current generator has implemented hysteria2 outbound."
       }
     },
     {
@@ -165,11 +165,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "仅用于自动回退判定，不把 Xray HTTP outbound 直接视为可无损切换。"
+        "note": "Only used for auto-fallback checks, Xray HTTP outbound is not directly treated as lossless fallback."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前 Sing-Box 回退生成器不会为 Xray HTTP outbound 生成等价配置。"
+        "note": "Current Sing-Box fallback generator does not generate equivalent configurations for Xray HTTP outbound."
       }
     },
     {
@@ -179,11 +179,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "仅用于自动回退判定，不把 Xray DNS outbound 直接视为可无损切换。"
+        "note": "Only used for auto-fallback checks, Xray DNS outbound is not directly treated as lossless fallback."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前 Sing-Box 回退生成器不会为 Xray DNS outbound 生成等价配置。"
+        "note": "Current Sing-Box fallback generator does not generate equivalent configurations for Xray DNS outbound."
       }
     },
     {
@@ -193,11 +193,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "当前 V2rayU 对普通 TCP 传输不额外生成 sing-box transport 块。"
+        "note": "V2rayU currently does not generate extra sing-box transport block for plain TCP transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "普通 TCP 传输可直接工作。"
+        "note": "Plain TCP transport works directly."
       }
     },
     {
@@ -207,11 +207,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 WebSocket transport 处理。"
+        "note": "Current fallback rules handle WebSocket transport as regular sing-box WebSocket transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 ws transport。"
+        "note": "Current generator has implemented WebSocket transport."
       }
     },
     {
@@ -221,11 +221,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box HTTP transport 处理 h2 模型。"
+        "note": "Current fallback rules handle h2 model as sing-box HTTP transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器会把 h2 模型映射为 sing-box http transport。"
+        "note": "Current generator maps h2 model to sing-box http transport."
       }
     },
     {
@@ -235,11 +235,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 gRPC transport 处理。"
+        "note": "Current fallback rules handle gRPC transport as regular sing-box gRPC transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 grpc transport。"
+        "note": "Current generator has implemented gRPC transport."
       }
     },
     {
@@ -249,7 +249,7 @@
       "docs_path": null,
       "rule": {
         "type": "unsupported",
-        "note": "Sing-Box 不支持 KCP 传输协议。"
+        "note": "Sing-Box does not support KCP transport protocol."
       }
     },
     {
@@ -259,11 +259,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 QUIC transport 处理。"
+        "note": "Current fallback rules handle QUIC transport as regular sing-box QUIC transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 quic transport。"
+        "note": "Current generator has implemented QUIC transport."
       }
     },
     {
@@ -273,11 +273,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "当前回退功能支持规则按 sing-box unix/domain socket transport 处理。"
+        "note": "Current fallback rules handle unix/domain socket transport as sing-box unix/domain socket transport."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 domainsocket transport。"
+        "note": "Current generator has implemented domain socket transport."
       }
     },
     {
@@ -287,11 +287,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "xhttp 的核心支持与字段边界需要独立核对，默认不把它视为自动回退安全项。"
+        "note": "xhttp core support and bounds must be checked independently; it is not treated as a safe auto-fallback target by default."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前生成器虽然会写入 type=xhttp，但还没有版本保障与完整字段映射校验。"
+        "note": "Although the generator writes type=xhttp, there is no version assurance or full field mapping validation yet."
       }
     },
     {
@@ -301,11 +301,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "Hysteria2 使用自定义 QUIC 传输，Sing-Box 原生支持。"
+        "note": "Hysteria2 uses custom QUIC transport, natively supported by Sing-Box."
       },
       "app_support": {
         "level": "supported",
-        "note": "Hysteria2 使用自定义 QUIC 传输，当前生成器已原生支持。"
+        "note": "Hysteria2 uses custom QUIC transport, natively supported by current generator."
       }
     },
     {
@@ -315,11 +315,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "无 TLS/REALITY 时的默认情况。"
+        "note": "Default scenario when no TLS/REALITY is configured."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器可直接输出。"
+        "note": "Current generator can directly output."
       }
     },
     {
@@ -329,11 +329,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 TLS 处理。"
+        "note": "Current fallback rules handle TLS as regular sing-box TLS."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 TLS 配置。"
+        "note": "Current generator has implemented TLS configurations."
       }
     },
     {
@@ -343,11 +343,11 @@
       "docs_path": null,
       "rule": {
         "type": "supported",
-        "note": "当前回退功能支持规则按 sing-box 常规 REALITY 处理。"
+        "note": "Current fallback rules handle REALITY as regular sing-box REALITY."
       },
       "app_support": {
         "level": "supported",
-        "note": "当前生成器已实现 REALITY 配置。"
+        "note": "Current generator has implemented REALITY configurations."
       }
     },
     {
@@ -357,11 +357,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "XTLS 不能仅凭 transport security 名称推断 sing-box 可无损接管。"
+        "note": "XTLS cannot be inferred as lossless fallback to sing-box solely by transport security name."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前回退生成器未实现 XTLS 对应的 sing-box 配置转换。"
+        "note": "Current fallback generator does not implement equivalent sing-box configuration translation for XTLS."
       }
     },
     {
@@ -371,11 +371,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "vision flow 需要结合 security/transport 组合功能一起核对。"
+        "note": "vision flow needs to be checked in combination with security/transport options."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前自动回退链路还没有把 vision flow 的可用性验证到可以默认接管。"
+        "note": "The auto-fallback chain has not validated vision flow usability to allow default takeover yet."
       }
     },
     {
@@ -385,11 +385,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "vision flow 需要结合 security/transport 组合功能一起核对。"
+        "note": "vision flow needs to be checked in combination with security/transport options."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前自动回退链路还没有把 vision flow 的可用性验证到可以默认接管。"
+        "note": "The auto-fallback chain has not validated vision flow usability to allow default takeover yet."
       }
     },
     {
@@ -399,11 +399,11 @@
       "docs_path": null,
       "rule": {
         "type": "compatibility",
-        "note": "Xray 的 TCP + HTTP 伪装不能直接等价推断为 sing-box 可自动切换。"
+        "note": "Xray TCP + HTTP disguise cannot be directly translated to auto-fallback on sing-box."
       },
       "app_support": {
         "level": "unsupported",
-        "note": "当前回退生成器未实现 TCP + HTTP 伪装的等价转换。"
+        "note": "Current fallback generator does not implement equivalent configuration translation for TCP + HTTP disguise."
       }
     }
   ]
