@@ -1,0 +1,358 @@
+//
+//  AppInstaller.swift
+//  V2rayU
+//
+//  Created by yanue on 2018/10/17.
+//  Copyright © 2018 yanue. All rights reserved.
+//
+
+import Cocoa
+
+actor AppInstaller: NSObject {
+    static let shared = AppInstaller()
+    var installReason: String = ""
+    // 从 Swift 传入 USERNAME — NSUserName() 在 App 进程中一定是真实用户，
+    // 解决 install.sh 在 osascript root 环境下无法可靠获取用户名的问题
+    let doSh = "cd '\(AppResourcesPath)' && sudo chown root:admin ./install.sh && sudo chmod a+rsx ./install.sh && USERNAME='\(NSUserName())' ./install.sh"
+
+    func checkInstall() async {
+        logger.info("source path: \(AppResourcesPath)")
+
+        let fileMgr = FileManager.default
+        var needRunInstall = false
+
+        // ====== 版本检查：每个新版本都执行一次 install ======
+        let markerFile = AppHomePath + "/.installed_version"
+        if !needRunInstall {
+            let installedVer = (try? String(contentsOfFile: markerFile, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if installedVer != appVersion {
+                logger.info("version mismatch: installed=\(installedVer), current=\(appVersion)")
+                installReason = "App updated to \(appVersion)"
+                needRunInstall = true
+            }
+        }
+
+        // ====== 目录检查 ======
+
+        // 用户数据目录
+        if !needRunInstall && !fileMgr.fileExists(atPath: AppHomePath) {
+            logger.info("app home dir \(AppHomePath) not exists")
+            installReason = "App home directory missing"
+            needRunInstall = true
+        }
+
+        // 用户数据目录可写
+        if !needRunInstall && !fileMgr.isWritableFile(atPath: AppHomePath) {
+            logger.info("app home dir \(AppHomePath) not writable")
+            installReason = "App home directory not writable"
+            needRunInstall = true
+        }
+
+        // 用户数据目录 owner 是当前用户
+        if !needRunInstall {
+            do {
+                let attrs = try fileMgr.attributesOfItem(atPath: AppHomePath)
+                let owner = attrs[.ownerAccountName] as? String ?? ""
+                if owner != NSUserName() {
+                    logger.info("app home dir owner=\(owner), expected=\(NSUserName())")
+                    installReason = "App home directory owner mismatch"
+                    needRunInstall = true
+                }
+            } catch {
+                logger.info("failed to get app home dir attributes: \(error)")
+                installReason = "App home directory attributes error"
+                needRunInstall = true
+            }
+        }
+
+        // 数据库文件可写（readonly 问题诊断）
+        if !needRunInstall && fileMgr.fileExists(atPath: databasePath) {
+            if !fileMgr.isWritableFile(atPath: databasePath) {
+                logger.info("database file \(databasePath) is readonly")
+                installReason = "Database file is readonly"
+                needRunInstall = true
+            }
+            // SQLite WAL/SHM 文件可写
+            if !needRunInstall {
+                for ext in ["-wal", "-shm"] {
+                    let walPath = databasePath + ext
+                    if fileMgr.fileExists(atPath: walPath) && !fileMgr.isWritableFile(atPath: walPath) {
+                        logger.info("database \(ext) file is readonly")
+                        installReason = "Database \(ext) file is readonly"
+                        needRunInstall = true
+                        break
+                    }
+                }
+            }
+        }
+
+
+        // ====== 二进制检查 ======
+
+        // xray-core 可执行
+        if !needRunInstall && !fileMgr.isExecutableFile(atPath: xrayCoreFile) {
+            logger.info("\(xrayCoreFile) not executable")
+            installReason = "xray-core not executable"
+            needRunInstall = true
+        }
+
+        // xray-core 架构匹配
+        if !needRunInstall && !checkFileIsCurrentArch(file: xrayCoreFile) {
+            logger.info("\(xrayCoreFile) not current arch")
+            installReason = "xray-core arch mismatch"
+            needRunInstall = true
+        }
+
+        // sing-box 可执行
+        let singBoxFile = getCoreFile(mode: .SingBox)
+        if !needRunInstall && !fileMgr.isExecutableFile(atPath: singBoxFile) {
+            logger.info("\(singBoxFile) not executable")
+            installReason = "sing-box not executable"
+            needRunInstall = true
+        }
+
+        // sing-box 架构匹配
+        if !needRunInstall && !checkFileIsCurrentArch(file: singBoxFile) {
+            logger.info("\(singBoxFile) not current arch")
+            installReason = "sing-box arch mismatch"
+            needRunInstall = true
+        }
+
+        // geoip.dat
+        if !needRunInstall && !fileMgr.fileExists(atPath: xrayCorePath + "/geoip.dat") {
+            logger.info("geoip.dat missing")
+            installReason = "geoip.dat missing"
+            needRunInstall = true
+        }
+
+        // sing-box >= 1.12 removed inline geosite/geoip support; keep local rule sets synced.
+        if !needRunInstall {
+            for name in singboxBundledRuleSetFiles {
+                let path = singboxRuleSetPath + "/" + name
+                if !fileMgr.fileExists(atPath: path) {
+                    logger.info("sing-box rule-set missing: \(path)")
+                    installReason = "sing-box rule-set missing"
+                    needRunInstall = true
+                    break
+                }
+            }
+        }
+
+        // ====== 隔离标记 ======
+        let quarantineFiles = [
+            (xrayCoreFile, "xray-core"),
+            (singBoxFile, "sing-box"),
+            (v2rayUTool, "V2rayUTool"),
+        ]
+        for (path, name) in quarantineFiles {
+            if !needRunInstall && isFileQuarantined(at: path) {
+                logger.info("\(path) is quarantined")
+                installReason = "\(name) quarantined"
+                needRunInstall = true
+            }
+        }
+
+        // ====== 工具 & 权限检查 ======
+
+        // V2rayUTool root:admin + setuid
+        if !needRunInstall && !checkFileIsRootAdmin(file: v2rayUTool) {
+            installReason = "V2rayUTool not root:admin"
+            needRunInstall = true
+        }
+
+        // V2rayUTool setuid(+s) 权限
+        if !needRunInstall {
+            do {
+                let attrs = try fileMgr.attributesOfItem(atPath: v2rayUTool)
+                if let perms = attrs[.posixPermissions] as? Int {
+                    if (perms & 0o4000) == 0 {  // S_ISUID
+                        logger.info("V2rayUTool missing setuid(+s) permission")
+                        installReason = "V2rayUTool missing setuid"
+                        needRunInstall = true
+                    }
+                }
+            } catch {
+                logger.info("failed to check V2rayUTool permissions: \(error)")
+                installReason = "V2rayUTool permission check failed"
+                needRunInstall = true
+            }
+        }
+
+        // V2rayUTool 版本
+        if !needRunInstall {
+            let toolVersion = shell(launchPath: "/bin/bash", arguments: ["-c", "\(v2rayUTool) version"])
+            if let version = toolVersion {
+                if version.contains("Usage:") || version.compare("4.0.0", options: .numeric) == .orderedAscending {
+                    installReason = "V2rayUTool version too old"
+                    needRunInstall = true
+                }
+            } else {
+                installReason = "V2rayUTool not exists"
+                needRunInstall = true
+            }
+        }
+
+        // core 更新脚本存在 + 可执行
+        let coreUpdateScripts = ["update-xray.sh", "update-singbox.sh"]
+        for scriptName in coreUpdateScripts {
+            let updateScript = AppBinRoot + "/" + scriptName
+            if !needRunInstall && !fileMgr.fileExists(atPath: updateScript) {
+                logger.info("\(updateScript) not exists")
+                installReason = "\(scriptName) missing"
+                needRunInstall = true
+            }
+            if !needRunInstall && !fileMgr.isExecutableFile(atPath: updateScript) {
+                logger.info("\(updateScript) not executable")
+                installReason = "\(scriptName) not executable"
+                needRunInstall = true
+            }
+        }
+
+        // sudoers 文件存在
+        let sudoerFile = "/private/etc/sudoers.d/v2rayu-sudoer"
+        if !needRunInstall && !fileMgr.fileExists(atPath: sudoerFile) {
+            logger.info("\(sudoerFile) not exists")
+            installReason = "sudoers rules missing"
+            needRunInstall = true
+        }
+
+        // sudoers 实际可用（验证具体命令能否无密码执行）
+        if !needRunInstall {
+            // 使用 sudo -n -l <command> 验证具体命令是否被 NOPASSWD 授权
+            let testStart = shell(launchPath: "/usr/bin/sudo", arguments: ["-n", "-l", "/bin/launchctl", "start", "yanue.v2rayu.tun-helper"])
+            let testStop = shell(launchPath: "/usr/bin/sudo", arguments: ["-n", "-l", "/bin/launchctl", "stop", "yanue.v2rayu.tun-helper"])
+            let startOk = testStart != nil && testStart!.contains("/bin/launchctl")
+            let stopOk = testStop != nil && testStop!.contains("/bin/launchctl")
+            if !startOk || !stopOk {
+                logger.info("sudoers NOPASSWD not effective for launchctl: start=\(startOk), stop=\(stopOk)")
+                installReason = "sudoers rules incorrect"
+                needRunInstall = true
+            }
+        }
+
+        if !needRunInstall {
+            for scriptName in coreUpdateScripts {
+                let scriptPath = AppBinRoot + "/" + scriptName
+                let testScript = shell(launchPath: "/usr/bin/sudo", arguments: ["-n", "-l", scriptPath, "*"])
+                let scriptOk = testScript != nil && testScript!.contains(scriptPath)
+                if !scriptOk {
+                    logger.info("sudoers NOPASSWD not effective for \(scriptName): \(scriptOk)")
+                    installReason = "sudoers rules incorrect for \(scriptName)"
+                    needRunInstall = true
+                    break
+                }
+            }
+        }
+
+        // tun-helper LaunchDaemon plist 存在
+        let tunPlist = "/Library/LaunchDaemons/yanue.v2rayu.tun-helper.plist"
+        if !needRunInstall && !fileMgr.fileExists(atPath: tunPlist) {
+            logger.info("\(tunPlist) not exists")
+            installReason = "tun-helper daemon not installed"
+            needRunInstall = true
+        }
+
+        // ====== 旧版残留迁移 ======
+        if !needRunInstall && (fileMgr.fileExists(atPath: AppHomePath + "/bin") || fileMgr.fileExists(atPath: AppHomePath + "/V2rayUTool")) {
+            logger.info("Legacy bin/V2rayUTool found in \(AppHomePath)")
+            installReason = "Migrate binaries to system directory"
+            needRunInstall = true
+        }
+
+        // 清理旧版 sudoers 文件
+        if !needRunInstall && fileMgr.fileExists(atPath: "/private/etc/sudoers.d/v2rayu-helper") {
+            logger.info("Old sudoers file v2rayu-helper found")
+            installReason = "Cleanup old sudoers file"
+            needRunInstall = true
+        }
+
+        logger.info("checkInstall: needRunInstall=\(needRunInstall), reason=\(self.installReason)")
+        if needRunInstall {
+            await showInstallAlert()
+        } else {
+            logger.info("no need install")
+        }
+        logger.info("checkInstall end")
+    }
+
+    func showInstallAlert() async {
+        // 在 actor 上下文中捕获所需值，避免在 @MainActor 闭包中跨隔离访问 actor 隔离属性
+        let reason = installReason
+        let sh = doSh
+
+        // MainActor.run 的 body 必须是同步的，不能是 async。
+        // 这里需要 await NSAlert 的 sheet 回调，因此使用 Task { @MainActor in ... }.value
+        let response: NSApplication.ModalResponse = await Task { @MainActor in
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = String(localized: .InstallTitle) + "\n\n" + reason
+            alert.informativeText = sh
+            alert.addButton(withTitle: String(localized: .Install))
+            alert.addButton(withTitle: String(localized: .Quit))
+            return await presentAlert(alert)
+        }.value
+
+        if response == .alertFirstButtonReturn {
+            let success = await self.install()
+            if !success {
+                // 安装失败，重新弹出安装提示
+                await self.showInstallAlert()
+            }
+        } else {
+            await MainActor.run {
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
+    /// 强制安装（跳过条件检查，直接弹出安装授权）
+    /// 用于运行时检测到关键组件异常（如 daemon 被 unload、sudoers 失效等）
+    func forceInstall(reason: String) async {
+        installReason = reason
+        logger.info("forceInstall: \(reason)")
+        await showInstallAlert()
+    }
+
+    @discardableResult
+    func install() async -> Bool {
+        let success = await executeAppleScriptWithOsascript(script: doSh)
+        guard success else {
+            logger.info("install failed, skip writing version marker")
+            return false
+        }
+        // 安装成功后写入版本标记，下次启动时跳过安装
+        let markerFile = AppHomePath + "/.installed_version"
+        try? appVersion.write(toFile: markerFile, atomically: true, encoding: .utf8)
+        return true
+    }
+
+    // 高版本macos执行NSAppleScript会出现授权失败
+    @discardableResult
+    func executeAppleScriptWithOsascript(script: String) async -> Bool {
+        do {
+            // Assuming runCommand is sync; wrap in continuation for async
+            let output = try await withCheckedThrowingContinuation { continuation in
+                do {
+                    let escapedScript = script
+                        .replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "\"", with: "\\\"")
+                    let appleScript = "do shell script \"\(escapedScript)\" with administrator privileges"
+                    let result = try runCommand(at: "/usr/bin/osascript", with: ["-e", appleScript])
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+            logger.info("executeAppleScript-Output: \(output)")
+            return true
+        } catch {
+            logger.info("executeAppleScript-Error: \(error)")
+            await MainActor.run {
+                let title = String(localized: .InstallFailed)
+                let toast = "\(String(localized: .InstallFailedManual))\n \(script)"
+                alertDialog(title: title, message: toast, blocking: true)
+            }
+            return false
+        }
+    }
+}

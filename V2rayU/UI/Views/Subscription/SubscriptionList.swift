@@ -1,0 +1,338 @@
+//
+//  SubscriptionList.swift
+//  V2rayU
+//
+//  Created by yanue on 2024/11/30.
+//
+
+import SwiftUI
+
+struct SubscriptionListView: View {
+    @StateObject private var viewModel = SubscriptionViewModel()
+
+    @State private var list: [SubscriptionEntity] = []
+    @State private var sortOrder: [KeyPathComparator<SubscriptionEntity>] = []
+    @State private var selection: Set<SubscriptionModel.ID> = []
+    @State private var selectedRow: SubscriptionModel? = nil
+    @State private var draggedRow: SubscriptionModel?
+    @State private var syncingRow: SubscriptionModel? = nil
+    @State private var syncingAll: Bool = false
+    @State private var tableOpacity: Double = 1.0
+    @State private var showDeleteConfirm = false
+    @State private var pendingDeleteUUIDs: [String] = []
+    @State private var pendingDeleteServerCount: Int = 0
+    @State private var deleteServers: Bool = true
+
+    private var filteredAndSortedItems: [SubscriptionEntity] {
+        viewModel.list
+    }
+    
+    private func resolveSelectedItems(for item: SubscriptionEntity) -> [SubscriptionEntity] {
+        if selection.contains(item.uuid) && selection.count > 1 {
+            return filteredAndSortedItems.filter { selection.contains($0.uuid) }
+        }
+        return [item]
+    }
+
+    private func performAfterMenuDismiss(_ action: @escaping () -> Void) {
+        // Avoid mutating SwiftUI state while AppKit context menus are still
+        // dismissing. Doing so can trigger AttributeGraph crashes.
+        DispatchQueue.main.async(execute: action)
+    }
+
+    private var deleteConfirmMessage: String {
+        pendingDeleteUUIDs.count > 1
+            ? String(localized: .DeleteMultipleConfirm, arguments: pendingDeleteUUIDs.count)
+            : localizedString(.DeleteTip)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            PageHeader(
+                icon: "link.circle",
+                title: localizedString(.Subscriptions),
+                subtitle: localizedString(.SubscriptionSubHead)
+            ) {
+                HStack(spacing: 8) {
+                    Button(action: { syncingAll = true }) {
+                        Label(localizedString(.SyncAll), systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .focusable(false)
+                    .disabled(viewModel.list.isEmpty)
+
+                    Button(action: { self.selectedRow = SubscriptionModel(from: SubscriptionEntity()) }) {
+                        Label(localizedString(.Add), systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .focusable(false)
+
+                    Divider()
+                        .frame(height: 20)
+
+                    Button(action: {
+                        tableOpacity = 0
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            loadData()
+                            tableOpacity = 1
+                        }
+                    }) {
+                        Label(String(localized: .Refresh), systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .focusable(false)
+                }
+            }
+
+            Spacer()
+
+            // 将复杂的 Table 表达式提取到单独的计算属性以降低类型检查复杂度
+            subscriptionTable
+                .opacity(tableOpacity)
+
+        }
+        .padding(8)
+        .sheet(item: $selectedRow) { row in
+            SubscriptionFormView(item: row) {
+                selectedRow = nil
+                loadData()
+            } onSaveAndSync: { [row] in
+                Task {
+                    await SubscriptionHandler.shared.syncOne(item: row.entity)
+                    await PingAll.shared.run()
+                    loadData()
+                }
+            }
+        }
+        .sheet(item: $syncingRow) { row in
+            SubscriptionSyncView(subscription: row.entity, isAll: false) { syncingRow = nil }
+        }
+        .sheet(isPresented: $syncingAll) {
+            SubscriptionSyncView(subscription: nil, isAll: true) { syncingAll = false }
+        }
+        .sheet(isPresented: $showDeleteConfirm) {
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Text(localizedString(.DeleteConfirm))
+                        .font(.headline)
+                    Text(deleteConfirmMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 16)
+                .padding(.horizontal, 20)
+
+                Divider()
+
+                Toggle(isOn: $deleteServers) {
+                    Text("\(localizedString(.DeleteServers)) (\(pendingDeleteServerCount))")
+                }
+                .toggleStyle(.switch)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                Divider()
+
+                HStack {
+                    Button(String(localized: .Cancel), role: .cancel) {
+                        pendingDeleteUUIDs = []
+                        deleteServers = false
+                        showDeleteConfirm = false
+                    }
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.cancelAction)
+                    .focusable(false)
+
+                    Spacer()
+
+                    Button(String(localized: .Delete), role: .destructive) {
+                        let uuids = pendingDeleteUUIDs
+                        let delServers = deleteServers
+                        pendingDeleteUUIDs = []
+                        deleteServers = false
+                        showDeleteConfirm = false
+                        DispatchQueue.main.async {
+                            for uuid in uuids {
+                                viewModel.delete(uuid: uuid, deleteServers: delServers)
+                            }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .focusable(false)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .frame(width: 300)
+            .background(Color(NSColor.windowBackgroundColor))
+            .onAppear {
+                pendingDeleteServerCount = pendingDeleteUUIDs.reduce(0) {
+                    $0 + ProfileStore.shared.getGroupProfiles(subid: $1).count
+                }
+            }
+        }
+        .task { loadData() }
+    }
+
+    // 处理拖拽排序逻辑:
+    // 参考: https://levelup.gitconnected.com/swiftui-enable-drag-and-drop-for-table-rows-with-custom-transferable-aa0e6eb9f5ce
+    // 去掉这个没用的状态
+    // @State private var list: [SubscriptionEntity] = []
+
+    func handleDrop(index: Int, rows: [SubscriptionEntity]) {
+        let uuids = rows.map(\.uuid)
+
+        // 先移除拖拽的元素
+        viewModel.list.removeAll { uuids.contains($0.uuid) }
+
+        // 计算安全的插入位置
+        let safeIndex = min(max(index, 0), viewModel.list.count)
+
+        // 插入拖拽的元素
+        viewModel.list.insert(contentsOf: rows, at: safeIndex)
+
+        logger.info("handleDrop: \(index) \(rows.count)")
+        viewModel.updateSortOrderInDBAsync()
+    }
+
+    private func contextMenuProvider(item: SubscriptionEntity) -> some View {
+        Group {
+            Button {
+                performAfterMenuDismiss {
+                    self.selectedRow = SubscriptionModel(from: item)
+                }
+            } label: {
+                Label(localizedString(.Edit), systemImage: "pencil")
+            }
+            .focusable(false)
+
+            Button {
+                performAfterMenuDismiss {
+                    self.syncingRow = SubscriptionModel(from: item)
+                }
+            } label: {
+                Label(localizedString(.SyncSubscriptionNow), systemImage: "arrow.triangle.2.circlepath")
+            }
+            .focusable(false)
+
+            Divider()
+            Button {
+                performAfterMenuDismiss {
+                    pendingDeleteUUIDs = resolveSelectedItems(for: item).map(\.uuid)
+                    showDeleteConfirm = true
+                }
+            } label: {
+                Label(localizedString(.Delete), systemImage: "trash")
+                    .foregroundColor(.red)
+            }
+            .focusable(false)
+        }
+    }
+
+    private func loadData() {
+        viewModel.getList()
+    }
+
+    // 提取的 Table 子视图，减少主视图表达式复杂度
+    private var subscriptionTable: some View {
+        ZStack {
+            Table(of: SubscriptionEntity.self, selection: $selection, sortOrder: $sortOrder) {
+                TableColumn("#") { (row: SubscriptionEntity) in
+                    HStack(spacing: 4) {
+                        if let idx = viewModel.list.firstIndex(where: { $0.uuid == row.uuid }) {
+                            Text("\(idx + 1)")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .width(10)
+                
+                TableColumn(String(localized: .TableFieldSort)) { (row: SubscriptionEntity) in
+                    HStack(spacing: 4) {
+                        Image(systemName: "line.3.horizontal")
+                    }
+                    .contentShape(Rectangle())   // 扩大点击/拖拽区域
+                    .draggable(row)              // 整个区域作为拖拽手柄
+                    .onTapGesture { }            // 吃掉点击事件，避免触发行选择
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.openHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
+                }
+                .width(30)
+                
+                TableColumn(String(localized: .TableFieldRemark)) { (row: SubscriptionEntity) in
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.pencil")
+                        Text(row.remark)
+                    }
+                    .contentShape(Rectangle())   // 扩大点击/拖拽区域
+                    .onTapGesture() { selectedRow = SubscriptionModel(from: row) }
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.pointingHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
+                }
+                .width(min: 100,max: 200)
+
+                TableColumn(String(localized: .TableFieldUrl)) { (row: SubscriptionEntity) in
+                    Text(row.url)
+                }
+                .width(min: 200,max: 400)
+
+                TableColumn(String(localized: .ConfigType)) { (row: SubscriptionEntity) in
+                    HStack(spacing: 4) {
+                        if row.configType == "clash" {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 10))
+                            Text("Clash")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        } else if row.configType == "normal" {
+                            Image(systemName: "doc.text")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 10))
+                            Text("Normal")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("-")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .width(80)
+
+                TableColumn(String(localized: .TableFieldInterval)) { (row: SubscriptionEntity) in
+                    Text(row.updateInterval.localizedInterval(locale: LanguageManager.shared.currentLocale))
+                }
+                .width(100)
+
+                TableColumn(String(localized: .TableFieldUpdateTime)) { (row: SubscriptionEntity) in
+                    Text(row.updateTime.formattedDate)
+                }
+                .width(150)
+
+            } rows: {
+                ForEach(viewModel.list) { row in
+                    TableRow(row)
+                        .contextMenu { contextMenuProvider(item: row) }
+                }
+                .dropDestination(for: SubscriptionEntity.self) { index, items in
+                    handleDrop(index: index, rows: items)
+                }
+
+            }
+        }
+    }
+}

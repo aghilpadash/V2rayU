@@ -1,0 +1,390 @@
+//
+// Created by yanue on 2018/11/22.
+// Copyright (c) 2018 yanue. All rights reserved.
+//
+
+import Cocoa
+
+func importUri(url: String) {
+    let urls = url.split(separator: "\n")
+    var successCount = 0
+    var failCount = 0
+
+    for url in urls {
+        let uri = url.trimmingCharacters(in: .whitespaces)
+
+        if uri.count == 0 {
+            continue
+        }
+
+        let importUri = ImportUri(share_uri: uri)
+
+        if let profile = importUri.doImport() {
+            ProfileStore.shared.insert(profile)
+            successCount += 1
+        } else {
+            noticeTip(title: "import server fail", informativeText: importUri.error)
+            failCount += 1
+        }
+    }
+
+    if successCount > 0 {
+        if successCount == 1 {
+            noticeTip(title: "import server success", informativeText: "Successfully imported 1 server")
+        } else {
+            noticeTip(title: "import server success", informativeText: "Successfully imported \(successCount) servers")
+        }
+    }
+}
+
+func supportProtocol(uri: String) -> Bool {
+    if uri.hasPrefix("ss://") || uri.hasPrefix("ssr://") || uri.hasPrefix("vmess://") || uri.hasPrefix("vless://") || uri.hasPrefix("trojan://") || uri.hasPrefix("hysteria2://") || uri.hasPrefix("anytls://") || uri.hasPrefix("naive://") || uri.hasPrefix("naive+https://") || uri.hasPrefix("ssh://") {
+        return true
+    }
+    return false
+}
+
+// MARK: - V2ray JSON Config Import
+
+/// 从 V2ray/Xray JSON 配置文本解析服务器
+/// 支持 outbounds 中的 vmess/vless/trojan/shadowsocks 协议
+/// - Parameter json: JSON 配置字符串
+/// - Returns: 解析后的 ProfileEntity，失败返回 nil
+func importFromJson(json: String) -> ProfileEntity? {
+    guard let data = json.data(using: .utf8) else {
+        return nil
+    }
+
+    do {
+        guard let jsonObj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let outbounds = jsonObj["outbounds"] as? [[String: Any]] else {
+            return nil
+        }
+
+        // 找到第一个代理协议 of the outbound（跳过 freedom/blackhole/dns 等）
+        let proxyProtocols = Set(["vmess", "vless", "trojan", "shadowsocks", "hysteria2", "anytls", "naive", "ssh"])
+        guard let proxyOutbound = outbounds.first(where: {
+            let proto = ($0["protocol"] as? String) ?? ($0["type"] as? String)
+            return proto.map { proxyProtocols.contains($0.lowercased()) } ?? false
+        }),
+        let protocolStr = (proxyOutbound["protocol"] as? String) ?? (proxyOutbound["type"] as? String) else {
+            return nil
+        }
+
+        return parseOutboundToProfile(protocolStr: protocolStr, outbound: proxyOutbound)
+    } catch {
+        logger.error("importFromJson error: \(error)")
+        return nil
+    }
+}
+
+/// 解析 outbound 配置到 ProfileEntity
+private func parseOutboundToProfile(protocolStr: String, outbound: [String: Any]) -> ProfileEntity? {
+    var profile = ProfileEntity()
+
+    switch protocolStr.lowercased() {
+    case "vmess":
+        profile.protocol = .vmess
+        if let settings = outbound["settings"] as? [String: Any],
+           let vmess = settings["vnext"] as? [[String: Any]],
+           let first = vmess.first {
+            profile.address = first["address"] as? String ?? ""
+            profile.port = first["port"] as? Int ?? 0
+            if let users = first["users"] as? [[String: Any]],
+               let firstUser = users.first {
+                profile.password = firstUser["id"] as? String ?? ""
+                profile.alterId = firstUser["alterId"] as? Int ?? 0
+                profile.encryption = firstUser["security"] as? String ?? "auto"
+            }
+        }
+
+    case "vless":
+        profile.protocol = .vless
+        if let settings = outbound["settings"] as? [String: Any],
+           let vnext = settings["vnext"] as? [[String: Any]],
+           let first = vnext.first {
+            profile.address = first["address"] as? String ?? ""
+            profile.port = first["port"] as? Int ?? 0
+            if let users = first["users"] as? [[String: Any]],
+               let firstUser = users.first {
+                profile.password = firstUser["id"] as? String ?? ""
+                profile.flow = firstUser["flow"] as? String ?? ""
+                profile.encryption = firstUser["encryption"] as? String ?? "none"
+            }
+        }
+
+    case "trojan":
+        profile.protocol = .trojan
+        if let settings = outbound["settings"] as? [String: Any],
+           let servers = settings["servers"] as? [[String: Any]],
+           let first = servers.first {
+            profile.address = first["address"] as? String ?? ""
+            profile.port = first["port"] as? Int ?? 0
+            profile.password = first["password"] as? String ?? ""
+        }
+
+    case "shadowsocks":
+        profile.protocol = .shadowsocks
+        if let settings = outbound["settings"] as? [String: Any],
+           let servers = settings["servers"] as? [[String: Any]],
+           let first = servers.first {
+            profile.address = first["address"] as? String ?? ""
+            profile.port = first["port"] as? Int ?? 0
+            profile.password = first["password"] as? String ?? ""
+            profile.encryption = first["method"] as? String ?? ""
+        }
+
+    case "hysteria2":
+        profile.protocol = .hysteria2
+        profile.network = .hysteria2
+        profile.address = outbound["address"] as? String ?? outbound["server"] as? String ?? ""
+        profile.port = outbound["port"] as? Int ?? 0
+        profile.password = outbound["password"] as? String ?? ""
+        if let settings = outbound["settings"] as? [String: Any] {
+            profile.password = settings["password"] as? String ?? profile.password
+        }
+
+    case "anytls":
+        profile.protocol = .anytls
+        profile.network = .tcp
+        profile.security = .tls
+        profile.address = outbound["address"] as? String ?? outbound["server"] as? String ?? ""
+        profile.port = outbound["port"] as? Int ?? outbound["server_port"] as? Int ?? 0
+        profile.password = outbound["password"] as? String ?? ""
+        if let settings = outbound["settings"] as? [String: Any] {
+            profile.address = settings["address"] as? String ?? settings["server"] as? String ?? profile.address
+            profile.port = settings["port"] as? Int ?? settings["server_port"] as? Int ?? profile.port
+            profile.password = settings["password"] as? String ?? profile.password
+        }
+        if let tls = outbound["tls"] as? [String: Any] {
+            profile.sni = tls["server_name"] as? String ?? tls["serverName"] as? String ?? profile.address
+            profile.allowInsecure = tls["insecure"] as? Bool ?? tls["allowInsecure"] as? Bool ?? false
+            if let alpnArray = tls["alpn"] as? [String], !alpnArray.isEmpty {
+                let alpnStr = alpnArray.joined(separator: ",")
+                    .replacingOccurrences(of: "http/1.1", with: "http1.1")
+                profile.alpn = V2rayStreamAlpn(rawValue: alpnStr) ?? .h2h1
+            }
+        }
+
+    case "naive":
+        profile.protocol = .naive
+        profile.network = .tcp
+        profile.security = .tls
+        profile.address = outbound["address"] as? String ?? outbound["server"] as? String ?? ""
+        profile.port = outbound["port"] as? Int ?? outbound["server_port"] as? Int ?? 0
+        profile.host = outbound["username"] as? String ?? ""
+        profile.password = outbound["password"] as? String ?? ""
+        if let settings = outbound["settings"] as? [String: Any] {
+            profile.address = settings["address"] as? String ?? settings["server"] as? String ?? profile.address
+            profile.port = settings["port"] as? Int ?? settings["server_port"] as? Int ?? profile.port
+            profile.host = settings["username"] as? String ?? profile.host
+            profile.password = settings["password"] as? String ?? profile.password
+        }
+        if let tls = outbound["tls"] as? [String: Any] {
+            profile.sni = tls["server_name"] as? String ?? tls["serverName"] as? String ?? profile.address
+            profile.allowInsecure = tls["insecure"] as? Bool ?? tls["allowInsecure"] as? Bool ?? false
+            if let alpnArray = tls["alpn"] as? [String], !alpnArray.isEmpty {
+                let alpnStr = alpnArray.joined(separator: ",")
+                    .replacingOccurrences(of: "http/1.1", with: "http1.1")
+                profile.alpn = V2rayStreamAlpn(rawValue: alpnStr) ?? .h2h1
+            }
+        }
+
+    case "ssh":
+        profile.protocol = .ssh
+        profile.network = .tcp
+        profile.address = outbound["address"] as? String ?? outbound["server"] as? String ?? ""
+        profile.port = outbound["port"] as? Int ?? outbound["server_port"] as? Int ?? 22
+        profile.host = outbound["username"] as? String ?? outbound["user"] as? String ?? "root"
+        profile.password = outbound["password"] as? String ?? ""
+        
+        var sshConfig = ProfileEntity.SSHConfig()
+        sshConfig.privateKey = outbound["private_key"] as? String ?? ""
+        sshConfig.privateKeyPassphrase = outbound["private_key_passphrase"] as? String ?? ""
+        profile.setSSHConfig(sshConfig)
+
+    default:
+        return nil
+    }
+
+    // 解析传输设置
+    if let streamSettings = outbound["streamSettings"] as? [String: Any] {
+        parseStreamSettings(streamSettings, into: &profile)
+    }
+
+    // 生成 remark
+    if profile.remark.isEmpty {
+        profile.remark = "\(profile.address):\(profile.port)"
+    }
+
+    return profile
+}
+
+/// 解析流传输设置
+private func parseStreamSettings(_ streamSettings: [String: Any], into profile: inout ProfileEntity) {
+    if let network = streamSettings["network"] as? String {
+        switch network {
+        case "tcp": profile.network = .tcp
+        case "kcp", "mkcp": profile.network = .kcp
+        case "ws", "websocket": profile.network = .ws
+        case "h2", "http": profile.network = .h2
+        case "grpc": profile.network = .grpc
+        case "quic": profile.network = .quic
+        case "xhttp": profile.network = .xhttp
+        default: profile.network = .tcp
+        }
+    }
+
+    if let security = streamSettings["security"] as? String {
+        switch security.lowercased() {
+        case "tls":
+            profile.security = .tls
+            if let tlsSettings = streamSettings["tlsSettings"] as? [String: Any] {
+                profile.sni = tlsSettings["serverName"] as? String ?? ""
+                profile.allowInsecure = tlsSettings["allowInsecure"] as? Bool ?? true
+                if let alpnArray = tlsSettings["alpn"] as? [String], !alpnArray.isEmpty {
+                    let alpnStr = alpnArray.joined(separator: ",")
+                        .replacingOccurrences(of: "http/1.1", with: "http1.1")
+                    profile.alpn = V2rayStreamAlpn(rawValue: alpnStr) ?? .h2h1
+                }
+                if let fingerprint = tlsSettings["fingerprint"] as? String {
+                    profile.fingerprint = V2rayStreamFingerprint(rawValue: fingerprint) ?? .chrome
+                }
+            }
+
+        case "reality":
+            profile.security = .reality
+            if let realitySettings = streamSettings["realitySettings"] as? [String: Any] {
+                profile.sni = realitySettings["serverName"] as? String ?? ""
+                profile.publicKey = realitySettings["publicKey"] as? String ?? ""
+                profile.shortId = realitySettings["shortId"] as? String ?? ""
+                profile.spiderX = realitySettings["spiderX"] as? String ?? ""
+                if let fingerprint = realitySettings["fingerprint"] as? String {
+                    profile.fingerprint = V2rayStreamFingerprint(rawValue: fingerprint) ?? .chrome
+                }
+            }
+
+        default:
+            profile.security = .none
+        }
+    }
+}
+
+class ImportUri {
+    var isValid: Bool = false
+    var error: String = ""
+    var remark: String = ""
+    private var share_uri: String = ""
+
+    init(share_uri: String) {
+        self.share_uri = share_uri
+    }
+
+    /// Fix hysteria2 URL with port hopping range in authority (e.g. host:20000-30000).
+    /// Converts to host:firstPort and adds mport query param.
+    private func fixHysteria2PortRange(_ uri: String) -> String {
+        let pattern = #"^(hysteria2://[^@]+@[^:]+):(\d+-\d+)(.*)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: uri, range: NSRange(uri.startIndex..., in: uri)) else {
+            return uri
+        }
+        let prefix = String(uri[Range(match.range(at: 1), in: uri)!])
+        let portRange = String(uri[Range(match.range(at: 2), in: uri)!])
+        let suffix = String(uri[Range(match.range(at: 3), in: uri)!])
+        let firstPort = portRange.components(separatedBy: "-").first ?? portRange
+
+        // Don't duplicate mport if already present
+        if suffix.contains("mport=") { return "\(prefix):\(firstPort)\(suffix)" }
+
+        // Split fragment, then handle path+query separately
+        let fragParts = suffix.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)
+        let basePart = String(fragParts[0])
+        let fragment = fragParts.count > 1 ? "#\(fragParts[1])" : ""
+        let mportParam = "mport=\(portRange)"
+
+        if let qi = basePart.firstIndex(of: "?") {
+            let path = String(basePart[..<qi])
+            let query = String(basePart[qi...])
+            return "\(prefix):\(firstPort)\(path)?\(mportParam)&\(query.dropFirst())\(fragment)"
+        }
+        return "\(prefix):\(firstPort)\(basePart)?\(mportParam)\(fragment)"
+    }
+
+    func doImport() -> ProfileEntity? {
+        var processedUri = share_uri
+        if share_uri.hasPrefix("hysteria2://") {
+            processedUri = fixHysteria2PortRange(share_uri)
+        }
+        var url = URL(string: processedUri)
+        if url == nil {
+            // 标准url不支持非url-encoded
+            let aUri = processedUri.split(separator: "#")
+            guard !aUri.isEmpty else {
+                self.error = "invalid url"
+                return nil
+            }
+            url = URL(string: String(aUri[0]))
+            if url == nil {
+                self.error = "invalid url"
+                return nil
+            }
+            if aUri.count > 1 {
+                self.remark = String(aUri[1]).urlDecoded()
+            }
+        }
+
+        // 定义变量
+        var uriHandler: BaseShareUri?
+
+        // 根据 URI 前缀选择对应处理类
+        if share_uri.hasPrefix("trojan://") {
+            uriHandler = TrojanUri()
+        } else if share_uri.hasPrefix("vmess://") {
+            uriHandler = VmessUri()
+        } else if share_uri.hasPrefix("vless://") {
+            uriHandler = VlessUri()
+        } else if share_uri.hasPrefix("ss://") {
+            uriHandler = ShadowsocksUri()
+        } else if share_uri.hasPrefix("ssr://") {
+            uriHandler = ShadowsocksRUri()
+        } else if share_uri.hasPrefix("hysteria2://") {
+            uriHandler = Hysteria2Uri()
+        } else if share_uri.hasPrefix("anytls://") {
+            uriHandler = AnyTlsUri()
+        } else if share_uri.hasPrefix("naive://") {
+            uriHandler = NaiveUri()
+        } else if share_uri.hasPrefix("naive+https://") {
+            // normalize naive+https:// to naive:// for NaiveUri parser
+            let normalizedUri = share_uri.replacingOccurrences(of: "naive+https://", with: "naive://", options: .anchored)
+            if let normalizedUrl = URL(string: normalizedUri) {
+                url = normalizedUrl
+            }
+            uriHandler = NaiveUri()
+        } else if share_uri.hasPrefix("ssh://") {
+            uriHandler = SSHUri()
+        }
+
+        // 解析 URI
+        if let handler = uriHandler {
+            let parseError = handler.parse(url: url!)
+            if let error = parseError {
+                // 如果解析失败，返回 nil
+                self.error = error.localizedDescription
+                return nil
+            }
+            // 解析成功返回 ProfileModel
+            var profile = handler.getProfile()
+            // 原始分享链接保存下来(用于比较是否订阅是否有变化)
+            profile.shareUri = share_uri
+            if self.remark.count > 0 {
+                profile.remark = self.remark
+            }
+            return profile
+        } else {
+            self.error = "unsupported protocol"
+        }
+
+        return nil
+    }
+
+}

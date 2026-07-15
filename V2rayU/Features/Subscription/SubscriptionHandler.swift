@@ -1,0 +1,370 @@
+import Cocoa
+import Combine
+import Yams
+
+// ----- v2ray subscribe  updater -----
+let NOTIFY_UPDATE_SubSync = Notification.Name(rawValue: "NOTIFY_UPDATE_SubSync")
+
+actor SubscriptionHandler {
+    static let shared = SubscriptionHandler()
+
+    private var SubscriptionHandlering = false
+    private let maxConcurrentTasks = 1 // work pool
+    private var cancellables = Set<AnyCancellable>()
+
+    // sync from Subscription list
+    public func sync(useProxy: Bool = true) {
+        if SubscriptionHandlering {
+            logger.info("SubscriptionHandler Syncing ...")
+            return
+        }
+        SubscriptionHandlering = true
+        logger.info("SubscriptionHandler start")
+
+        let list = SubscriptionStore.shared.fetchAll()
+
+        if list.count == 0 {
+            logTip(title: "fail: ", uri: "", informativeText: " please add Subscription Url")
+        }
+
+        // 开始执行异步任务
+        syncTaskGroup(items: list, useProxy: useProxy)
+    }
+
+    func syncOne(item: SubscriptionEntity, useProxy: Bool = true) {
+        if SubscriptionHandlering {
+            logger.info("SubscriptionHandler Syncing ...")
+            return
+        }
+        SubscriptionHandlering = true
+        logger.info("SubscriptionHandler start syncOne")
+
+        Task {
+            defer {
+                self.SubscriptionHandlering = false
+                self.refreshMenu()
+            }
+            do {
+                // 确保订阅仍然存在（防止定时器在删除后未取消导致重新插入）
+                guard SubscriptionStore.shared.fetchOne(uuid: item.uuid) != nil else {
+                    logger.info("syncOne: subscription \(item.uuid) has been deleted, skipping")
+                    return
+                }
+
+                let configType = try await self.dlFromUrl(url: item.url, sub: item, useProxy: useProxy)
+                logger.info("SubscriptionHandler syncOne success")
+                
+                // 下载成功后更新 updateTime 并保存
+                var updated = item
+                updated.updateTime = Int(Date().timeIntervalSince1970)
+                updated.configType = configType
+                updated.upsert()
+            } catch {
+                logger.info("SubscriptionHandler syncOne error: \(error)")
+                logTip(title: "syncOne fail: ", uri: item.url, informativeText: error.localizedDescription)
+            }
+        }
+    }
+
+    private func syncTaskGroup(items: [SubscriptionEntity], useProxy: Bool = true) {
+        // 使用 Combine 处理多个异步任务
+        items.publisher.flatMap(maxPublishers: .max(maxConcurrentTasks)) { item in
+            Future<Void, Error> { promise in
+                Task {
+                    do {
+                        // 确保订阅仍然存在
+                        guard SubscriptionStore.shared.fetchOne(uuid: item.uuid) != nil else {
+                            logger.info("syncTaskGroup: subscription \(item.uuid) has been deleted, skipping")
+                            promise(.success(()))
+                            return
+                        }
+
+                        let configType = try await self.dlFromUrl(url: item.url, sub: item, useProxy: useProxy)
+                        // 下载成功后更新 updateTime 并保存
+                        var updated = item
+                        updated.updateTime = Int(Date().timeIntervalSince1970)
+                        updated.configType = configType
+                        updated.upsert()
+                        promise(.success(()))
+                    } catch {
+                        promise(.failure(error))
+                    }
+                }
+            }
+        }
+        .collect()
+        .sink(receiveCompletion: { completion in
+            switch completion {
+            case .finished:
+                logger.info("All tasks completed")
+            case let .failure(error):
+                logger.info("Error: \(error)")
+            }
+            Task {
+                self.onSyncComplete()
+            }
+        }, receiveValue: { _ in })
+        .store(in: &cancellables)
+    }
+
+    /// actor-isolated 完成回调
+    private func onSyncComplete() {
+        SubscriptionHandlering = false
+        refreshMenu()
+    }
+
+    func refreshMenu() {
+        logger.info("SubscriptionHandler refreshMenu")
+        SubscriptionHandlering = false
+        // refresh server
+        Task {
+            await AppMenuManager.shared.refreshServerItems()
+            await AppMenuManager.shared.updateMenuTitles()
+        }
+        // 仅在有节点时才触发 ping，避免在无节点时将 inPing 卡住
+        let hasProfiles = !ProfileStore.shared.fetchAll().isEmpty
+        if hasProfiles {
+            // 使用 Task.sleep 替代 sleep() 避免阻塞 actor
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                // do ping
+                await PingAll.shared.run()
+            }
+        }
+    }
+
+    public func dlFromUrl(url: String, sub: SubscriptionEntity, useProxy: Bool = true) async throws -> String {
+        let trimmedUrl = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        logTip(title: "loading from : ", uri: "", informativeText: trimmedUrl + "\n\n")
+
+        guard let reqUrl = URL(string: trimmedUrl) else {
+            logTip(title: "loading from : ", uri: "", informativeText: "url is not valid: " + trimmedUrl + "\n\n")
+            throw NSError(domain: "SubscriptionHandler", code: 1001, userInfo: [NSLocalizedDescriptionKey: "url is not valid: \(trimmedUrl)"])
+        }
+
+        let configuration: URLSessionConfiguration = useProxy ? getProxyUrlSessionConfigure() : .default
+        let session = URLSession(configuration: configuration)
+        do {
+            let (data, _) = try await session.data(for: URLRequest(url: reqUrl))
+            if let outputStr = String(data: data, encoding: String.Encoding.utf8) {
+                return handle(base64Str: outputStr, sub: sub, url: url)
+            } else {
+                logTip(title: "loading fail: ", uri: url, informativeText: "data is nil")
+                throw NSError(domain: "SubscriptionHandler", code: 1002, userInfo: [NSLocalizedDescriptionKey: "subscription data is not valid UTF-8"])
+            }
+        } catch let error {
+            // failed to write file – bad permissions, bad filename, missing permissions, or more likely it can't be converted to the encoding
+            logger.info("save json file fail: \(error)")
+            throw error
+        }
+    }
+
+    func handle(base64Str: String, sub: SubscriptionEntity, url: String) -> String {
+        let trimmed = base64Str.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 如果用户手动指定了 configType，则强制使用对应解析方式
+        if sub.configType == "clash" {
+            if let strTmp = trimmed.base64Decoded() {
+                if importByYaml(strTmp: strTmp, sub: sub) { return "clash" }
+            }
+            if importByYaml(strTmp: trimmed, sub: sub) { return "clash" }
+            logTip(title: "clash parse fail: ", uri: url, informativeText: "forced clash mode but no valid proxies found")
+            return "clash"
+        }
+        if sub.configType == "normal" {
+            if let strTmp = trimmed.base64Decoded() {
+                importByNormal(strTmp: strTmp, sub: sub)
+            } else {
+                importByNormal(strTmp: trimmed, sub: sub)
+            }
+            return "normal"
+        }
+
+        // Auto mode — try base64 decode first
+        if let strTmp = trimmed.base64Decoded() {
+            logTip(title: "handle url: ", uri: "", informativeText: url + "\n\n")
+            if importByYaml(strTmp: strTmp, sub: sub) {
+                return "clash"
+            }
+            importByNormal(strTmp: strTmp, sub: sub)
+            return "normal"
+        }
+
+        // Not valid base64 — try parsing as plain text directly
+        logTip(title: "not base64, try direct parse: ", uri: "", informativeText: url + "\n\n")
+        if importByYaml(strTmp: trimmed, sub: sub) {
+            return "clash"
+        }
+        importByNormal(strTmp: trimmed, sub: sub)
+        return "normal"
+    }
+
+    func getOldCount(sub: SubscriptionEntity) -> Int {
+        return ProfileStore.shared.count(filter: [ProfileEntity.Columns.subid.name: sub.uuid])
+    }
+
+    func importByYaml(strTmp: String, sub: SubscriptionEntity) -> Bool {
+        var list: [ProfileEntity] = []
+
+        // parse clash yaml
+        do {
+            let decoder = YAMLDecoder()
+            let decoded = try decoder.decode(Clash.self, from: strTmp)
+            if decoded.proxies.isEmpty {
+                return false
+            }
+            for clash in decoded.proxies {
+                if var item = clash.toProfile() {
+                    item.subid = sub.uuid
+                    list.append(item)
+                }
+            }
+
+            if list.isEmpty {
+                return false
+            }
+
+            logTip(title: "importByYaml: ", informativeText: "old=\(getOldCount(sub: sub)) - new=\(list.count)")
+
+            // 使用 diff 模式：按 uniqueKey 对比，保留旧 profile 的 metadata（速度、流量等）
+            let olds = ProfileStore.shared.getGroupProfiles(subid: sub.uuid)
+            var oldMap = [String: ProfileEntity]()
+            for item in olds {
+                let key = item.uniqueKey()
+                oldMap[key] = item
+            }
+
+            var adds = [ProfileEntity]()
+            var dels = [ProfileEntity]()
+            var exists = Set<String>()
+            var seenKeys = Set<String>()
+
+            for item in list {
+                let key = item.uniqueKey()
+                guard seenKeys.insert(key).inserted else { continue }
+                if let old = oldMap[key] {
+                    exists.insert(key)
+                    ProfileStore.shared.updateProfile(oldDto: old, newDto: item)
+                } else {
+                    adds.append(item)
+                }
+            }
+
+            for (key, item) in oldMap where !exists.contains(key) {
+                dels.append(item)
+            }
+
+            if !adds.isEmpty {
+                ProfileStore.shared.insertMany(adds)
+            }
+            for del in dels {
+                ProfileStore.shared.delete(uuid: del.uuid)
+            }
+
+            if !dels.isEmpty {
+                let uuids = dels.map(\.uuid)
+                Task { @MainActor in
+                    uuids.forEach { CombinedConfigStore.removeProfile(uuid: $0) }
+                }
+            }
+
+            return true
+        } catch {
+            logger.info("parseYaml \(error)")
+        }
+
+        return false
+    }
+
+    func importByNormal(strTmp: String, sub: SubscriptionEntity) {
+        var list: [ProfileEntity] = []
+        
+        // 文本按行拆分
+        let lines = strTmp.trimmingCharacters(in: .newlines).components(separatedBy: CharacterSet.newlines)
+        for (i, uri) in lines.enumerated() {
+            let filterUri = uri.trimmingCharacters(in: .whitespacesAndNewlines)
+            // import every server
+            if filterUri.count == 0 {
+                continue
+            }
+            let importTask = ImportUri(share_uri: filterUri)
+            if var profile = importTask.doImport() {
+                profile.subid = sub.uuid
+                list.append(profile)
+            } else {
+                logTip(title: "line \(i) importByNormal fail ", uri: uri, informativeText: "line \(i) import uri fail: " + importTask.error)
+            }
+        }
+
+        // 查询旧的
+        let olds = ProfileStore.shared.getGroupProfiles(subid: sub.uuid)
+
+        // 组合旧的 unique key 集合
+        var oldMap = [String: ProfileEntity]()
+        for item in olds {
+            let key = item.uniqueKey()
+            oldMap[key] = item
+        }
+
+        var adds = [ProfileEntity]()
+        var dels = [ProfileEntity]()
+        var exists = Set<String>()
+        var seenKeys = Set<String>()
+
+        // 遍历新的列表
+        for item in list {
+            let key = item.uniqueKey()
+            // 跳过同一批次中重复的 key（订阅内容里相同的 URI 可能出现多次）
+            guard seenKeys.insert(key).inserted else {
+                logTip(title: "skip duplicate: ", informativeText: "\(item.remark), \(item.address):\(item.port)")
+                continue
+            }
+            logTip(title: "正在处理 \(key)", informativeText: "\(item.remark), \(item.address):\(item.port)")
+            if let old = oldMap[key] {
+                exists.insert(key)
+                // 更新旧的
+                ProfileStore.shared.updateProfile(oldDto:  old, newDto: item)
+                logTip(title: "update existing profile: ", informativeText: "\(sub.remark), \(item.remark), \(item.address):\(item.port)")
+            } else {
+                // 新增
+                logTip(title: "add new profile: ", informativeText: "\(sub.remark), \(item.remark), \(item.address):\(item.port)")
+                adds.append(item)
+            }
+        }
+
+        // 找出需要删除的（旧的但不在新的里）
+        for (key, item) in oldMap {
+            if !exists.contains(key) {
+                logTip(title: "delete old profile: ", informativeText: "\(sub.remark), \(sub.url) - \(item.remark), \(item.address):\(item.port)")
+                dels.append(item)
+            }
+        }
+
+        // 插入新的
+        if !adds.isEmpty {
+            ProfileStore.shared.insertMany(adds)
+        }
+        
+        // 删除旧的
+        for del in dels {
+            ProfileStore.shared.delete(uuid: del.uuid)
+        }
+
+        if !dels.isEmpty {
+            let uuids = dels.map(\.uuid)
+            Task { @MainActor in
+                uuids.forEach { CombinedConfigStore.removeProfile(uuid: $0) }
+            }
+        }
+
+        logTip(title: "importByNormal: ", informativeText: "\(sub.remark), \(sub.url) added=\(adds.count), deleted=\(dels.count), exists=\(exists.count)")
+    }
+
+    func logTip(title: String = "", uri: String = "", informativeText: String = "") {
+        NotificationCenter.default.post(name: NOTIFY_UPDATE_SubSync, object: title + informativeText + "\n")
+        logger.info("SubSync: \(title + informativeText)")
+        if uri != "" {
+            NotificationCenter.default.post(name: NOTIFY_UPDATE_SubSync, object: "url: " + uri + "\n\n\n")
+        }
+    }
+}

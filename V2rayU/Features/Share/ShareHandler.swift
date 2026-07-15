@@ -1,0 +1,34 @@
+import Cocoa
+
+class ShareUri {
+    var error = ""
+    var uri: String = ""
+
+    static func generateShareUri(item: ProfileEntity) -> String {
+        let handler = ShareUri()
+        
+        switch item.protocol {
+        case .trojan:
+            handler.uri = TrojanUri(from: item).encode()
+        case .vmess:
+            handler.uri = VmessUri(from: item).encode()
+        case .vless:
+            handler.uri = VlessUri(from: item).encode()
+        case .shadowsocks:
+            handler.uri = ShadowsocksUri(from: item).encode()
+        case .hysteria2:
+            handler.uri = Hysteria2Uri(from: item).encode()
+        case .anytls:
+            handler.uri = AnyTlsUri(from: item).encode()
+        case .naive:
+            handler.uri = NaiveUri(from: item).encode()
+        case .ssh:
+            handler.uri = SSHUri(from: item).encode()
+        default:
+            handler.error = "Protocol not supported"
+            return ""
+        }
+        
+        return handler.uri
+    }
+}

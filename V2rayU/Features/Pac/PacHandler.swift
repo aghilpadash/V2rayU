@@ -1,0 +1,222 @@
+//
+//  PacHandler.swift
+//  V2rayU
+//
+//  Created by yanue on 2025/7/21.
+//
+
+import Foundation
+
+let PACRulesDirPath = AppHomePath + "/pac/"
+let PACUserRuleFilePath = PACRulesDirPath + "user-rule.txt"
+let PACFilePath = AppHomePath + "/proxy.js"
+let PACAbpFile = PACRulesDirPath + "abp.js"
+let GFWListFilePath = PACRulesDirPath + "gfwlist.txt"
+let GFWListURL = "https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt"
+
+private let LocalHttpAddress = "127.0.0.1"
+
+
+func getLocalPacUrl() -> String {
+    "http://\(LocalHttpAddress):\(getPacPort())/proxy.js"
+}
+
+
+func getLocalConfigUrl() -> String {
+    "http://\(LocalHttpAddress):\(getPacPort())/config.json"
+}
+
+
+func getLocalTunConfigUrl() -> String {
+    "http://\(LocalHttpAddress):\(getPacPort())/tun.json"
+}
+
+
+func getPacUrl() -> String {
+    let pacUrl = "http://" + getPacAddress() + ":" + String(getPacPort()) + "/proxy.js"
+    return pacUrl
+}
+
+func getConfigUrl() -> String {
+    let configUrl = "http://" + getPacAddress() + ":" +  String(getPacPort()) + "/config.json"
+    return configUrl
+}
+
+func getTunConfigUrl() -> String {
+    let configUrl = "http://" + getPacAddress() + ":" + String(getPacPort()) + "/tun.json"
+    return configUrl
+}
+
+// Copy PAC template files from app bundle if missing at user home path
+func ensurePacTemplateFiles() {
+    let files = ["abp.js", "user-rule.txt", "gfwlist.txt"]
+    for file in files {
+        let destPath = PACRulesDirPath + file
+        if FileManager.default.fileExists(atPath: destPath) {
+            continue
+        }
+        guard let srcUrl = Bundle.main.url(forResource: file, withExtension: nil, subdirectory: "pac") else {
+            logger.info("ensurePacTemplateFiles: bundle missing \(file)")
+            continue
+        }
+        do {
+            try FileManager.default.copyItem(at: srcUrl, to: URL(fileURLWithPath: destPath))
+            logger.info("ensurePacTemplateFiles: copied \(file) from bundle")
+        } catch {
+            logger.info("ensurePacTemplateFiles: copy \(file) failed \(error)")
+        }
+    }
+}
+
+// Because of LocalSocks5.ListenPort may be changed
+func GeneratePACFile(rewrite: Bool) -> Bool {
+    let socksPort = String(getEffectiveSocksProxyPort())
+    let pacAddress = getPacAddress()
+    let fileMgr = FileManager.default
+
+    if !fileMgr.fileExists(atPath: PACRulesDirPath) {
+        do {
+            try fileMgr.createDirectory(atPath: PACRulesDirPath, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+            logger.info("create PACRulesDirPath fail \(error)")
+            return false
+        }
+    }
+    
+    // ensure template files exist (copy from bundle if missing)
+    ensurePacTemplateFiles()
+    
+    // permission
+    _ = shell(launchPath: "/bin/bash", arguments: ["-c", "cd " + AppHomePath + " && /bin/chmod -R 755 ./pac"])
+
+    // if PACFilePath exist and not need rewrite
+    if !(rewrite || !FileManager.default.fileExists(atPath: PACFilePath)) {
+        return true
+    }
+
+    logger.info("GeneratePACFile rewrite: \(pacAddress), \(socksPort)" )
+    let userRules = getPacUserRules()
+    var gfwlist = getPacGFWList()
+    do {
+        if let data = Data(base64Encoded: gfwlist, options: .ignoreUnknownCharacters),
+           let str = String(data: data, encoding: .utf8) {
+            logger.info("base64Encoded")
+            gfwlist = str
+        } else if !gfwlist.isEmpty {
+            logger.info("base64Encoded not decode, fallback to raw gfwlist")
+        } else {
+            logger.info("gfwlist empty, generating PAC from user rules only")
+        }
+
+        let userRuleLines = userRules.components(separatedBy: CharacterSet.newlines)
+        var lines = gfwlist.components(separatedBy: CharacterSet.newlines)
+
+        // 应先 userRules 后 gfwlist(匹配到就退出,短路逻辑)
+        lines = userRuleLines + lines
+
+        // Filter empty and comment lines
+        lines = lines.filter({ (s: String) -> Bool in
+            if s.isEmpty {
+                return false
+            }
+            let c = s[s.startIndex]
+            if c == "!" || c == "[" {
+                return false
+            }
+            return true
+        })
+
+        do {
+            // rule lines to json array
+            let rulesJsonData: Data = try JSONSerialization.data(withJSONObject: lines, options: .prettyPrinted)
+            guard let rulesJsonStr = String(data: rulesJsonData, encoding: String.Encoding.utf8) else {
+                logger.info("Failed to Get rulesJsonData")
+                return false
+            }
+
+            // Get raw pac js
+            guard let jsData = try? Data(contentsOf: URL(fileURLWithPath: PACAbpFile)) else {
+                logger.info("Failed to Get raw pac js")
+                return false
+            }
+            guard var jsStr = String(data: jsData, encoding: String.Encoding.utf8) else {
+                logger.info("Failed to Get js str")
+                return false
+            }
+
+            // Replace rules placeholder in pac js
+            jsStr = jsStr.replacingOccurrences(of: "__RULES__", with: rulesJsonStr)
+            // Replace __SOCKS5PORT__ palcholder in pac js
+            jsStr = jsStr.replacingOccurrences(of: "__SOCKS5PORT__", with: "\(socksPort)")
+            // Replace __SOCKS5ADDR__ palcholder in pac js
+            var sin6 = sockaddr_in6()
+            if pacAddress.withCString({ cstring in inet_pton(AF_INET6, cstring, &sin6.sin6_addr) }) == 1 {
+                jsStr = jsStr.replacingOccurrences(of: "__SOCKS5ADDR__", with: "[\(pacAddress)]")
+            } else {
+                jsStr = jsStr.replacingOccurrences(of: "__SOCKS5ADDR__", with: pacAddress)
+            }
+            logger.info("PACFilePath: \(PACFilePath)")
+
+            // Write the pac js to file.
+            try jsStr.data(using: String.Encoding.utf8)?.write(to: URL(fileURLWithPath: PACFilePath), options: .atomic)
+            return true
+        } catch {
+            logger.info("write pac fail \(error)")
+        }
+    }
+
+    return false
+}
+
+func getPacUserRules() -> String {
+    var userRuleTxt = """
+    ! Put user rules line by line in this file.
+    ! See https://adblockplus.org/en/filter-cheatsheet
+    ||api.github.com
+    ||githubusercontent.com
+    ||github.io
+    ||github.com
+    ||chat.openai.com
+    ||openai.com
+    ||chatgpt.com
+    """
+    let url = URL(fileURLWithPath: PACUserRuleFilePath)
+    if let str = try? String(contentsOf: url, encoding: .utf8) {
+        logger.info("getPacUserRules: \(PACUserRuleFilePath) \(str.count)")
+        if str.count > 0 {
+            userRuleTxt = str
+        }
+    }
+    // auto include githubusercontent.com api.github.com
+    if !userRuleTxt.contains("githubusercontent.com") {
+        userRuleTxt.append("\n||githubusercontent.com")
+    }
+    if !userRuleTxt.contains("github.io") {
+        userRuleTxt.append("\n||github.io")
+    }
+    if !userRuleTxt.contains("api.github.com") {
+        userRuleTxt.append("\n||api.github.com")
+    }
+    if !userRuleTxt.contains("openai.com") {
+        userRuleTxt.append("\n||openai.com")
+    }
+    if !userRuleTxt.contains("chat.openai.com") {
+        userRuleTxt.append("\n||chat.openai.com")
+    }
+    if !userRuleTxt.contains("chatgpt.com") {
+        userRuleTxt.append("\n||chatgpt.com")
+    }
+    return userRuleTxt
+}
+
+func getPacGFWList() -> String {
+    var gfwList = ""
+    let url = URL(fileURLWithPath: GFWListFilePath)
+    if let str = try? String(contentsOf: url, encoding: .utf8) {
+        logger.info("getPacGFWList: \(GFWListFilePath) \(str.count)")
+        if str.count > 0 {
+            gfwList = str
+        }
+    }
+    return gfwList
+}

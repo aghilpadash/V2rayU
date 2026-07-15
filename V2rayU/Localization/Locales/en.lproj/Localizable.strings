@@ -1,0 +1,788 @@
+/* Multi-language localization LanguageLabel.strings (English) */
+
+// MARK: - Language & Theme
+"Language" = "Language";
+"English" = "English";
+"Simplified Chinese" = "简体中文";
+"Traditional Chinese" = "繁體中文";
+"Theme" = "Theme";
+"Light" = "Light";
+"Dark" = "Dark";
+"FollowSystem" = "Follow System";
+
+// MARK: - Base Operations
+"Enable" = "Enable";
+"Minute" = "Minute";
+"Hour"   = "Hour";
+"Day"    = "Day";
+"Save" = "Save";
+"Saved" = "Saved";
+"Total" = "Total";
+"Confirm" = "Confirm";
+"Cancel" = "Cancel";
+"Close" = "Close";
+"Reset" = "Reset";
+"Remark" = "Remark";
+"Edit" = "Edit";
+"Preview" = "Preview";
+"Delete" = "Delete";
+"DeleteSelected" = "Delete Selected";
+"DeleteConfirm" = "Are you sure you want to delete this item?";
+"DeleteSelectedConfirm" = "Are you sure you want to delete the selected items?";
+"DeleteTip" = "This action cannot be undone.";
+"DeleteMultipleConfirm" = "Are you sure you want to delete %d items? This action cannot be undone.";
+"DeleteServers" = "Also delete corresponding servers";
+"OK" = "OK";
+"Add" = "Add";
+"Export" = "Export";
+"Select" = "Select";
+"SetActive" = "Set as Active";
+"Duplicate" = "Duplicate";
+"Regenerate" = "Regenerate";
+"Regenerated" = "Regenerated";
+"Generate" = "Generate";
+"Generated" = "Generated";
+"Copy" = "Copy";
+"Copied" = "Copied";
+"CopyFailed" = "Copy Failed";
+"ShareProfile" = "Share Profile";
+
+// MARK: - App Content
+"Activity" = "Activity";
+"ActivitySubHead" = "View recent activity and logs";
+"Servers" = "Servers";
+"ServerSubHead" = "Manage and configure servers";
+"Combinations" = "Combinations";
+"CombinationSubHead" = "Multi-inbound to outbound profile groups";
+"Subscriptions" = "Subscriptions";
+"SubscriptionSubHead" = "Manage subscription sources";
+"Routings" = "Routings";
+"RoutingSubHead" = "Match priority: Domain Block -> Domain Proxy -> Domain Direct -> IP Block -> IP Proxy -> IP Direct";
+"Settings" = "Settings";
+"SettingsSubHead" = "General application settings";
+"About" = "About";
+"AboutSubHead" = "About this application";
+"AboutAppIntroduction" = "V2rayU is a macOS proxy client based on Xray-core and Sing-Box, supporting VMess, VLESS, Trojan, Shadowsocks, SSR, SOCKS5, Hysteria, Hysteria2, Tuic, AnyTLS, Naive and more. It provides an intuitive interface for managing proxy connections, subscriptions, routing rules, and TUN mode.";
+
+// MARK: - Settings Tabs
+"General" = "General";
+"Shortcuts" = "Shortcuts";
+"Advanced" = "Advanced";
+"PAC" = "PAC";
+"DNS" = "DNS";
+"TunDns" = "TUN DNS";
+"Core" = "Core";
+"Tun" = "TUN";
+
+// MARK: - General Settings
+"LaunchAtLogin" = "Launch at login";
+"CheckForUpdateAutomatically" = "Check for updates automatically";
+"AutoUpdateServersFromSubscriptions" = "Auto update servers from subscriptions";
+"AutomaticallySelectFastestServer" = "Auto-select the fastest server";
+"ShowProxySpeedOnTrayIcon" = "Show proxy speed on tray icon";
+"ShowLatencyOnTrayIcon" = "Show latency on tray icon";
+"ShowCountryFlagIcon" = "Show country flag in menu";
+"EnableProxyStatistics" = "Enable proxy statistics";
+"KeyboardShortcuts" = "Keyboard Shortcuts";
+"Toggle" = "Toggle";
+"ProxyModes" = "Proxy Modes";
+"View" = "View";
+"Tools" = "Tools";
+"ToggleV2rayOnOff" = "Toggle Proxy On/Off";
+"SwitchProxyMode" = "Switch Proxy Mode";
+"SwitchToTunnelMode" = "Switch to Tun Mode";
+"SwitchToGlobalMode" = "Switch to Global Mode";
+"SwitchToManualMode" = "Switch to Manual Mode";
+"SwitchToPacMode" = "Switch to PAC Mode";
+
+// MARK: - Advanced Settings
+"LocalSocksListenPort" = "Local SOCKS listen port";
+"EnableUDP" = "Enable UDP";
+"LocalHttpListenPort" = "Local HTTP listen port";
+"EnableMixedPort" = "Enable mixed proxy port";
+"MixedProxyPort" = "Mixed proxy port";
+"LocalPacListenPort" = "Local PAC listen port";
+"AllowLAN" = "Allow LAN connections";
+"EnableSniffing" = "Enable sniffing";
+"EnableMux" = "Enable Mux";
+"Mux" = "Mux";
+"V2rayCoreLogLevel" = "V2Ray core log level";
+"TestSettings" = "Test Settings";
+"LatencyTestConcurrency" = "Concurrent latency tests";
+"PingTestURL" = "Direct connection test URL";
+"UDPTestURL" = "UDP test address";
+"CurrentConnectionTestURL" = "Current connection info test URL";
+
+// MARK: - PAC Settings
+"PacSettings" = "PAC Settings";
+"ConfigureProxyRules" = "Configure proxy rules";
+"GFWListDownloadURL" = "GFWList download URL";
+"EnterGFWListURL" = "Enter GFWList URL";
+"CustomRules" = "Custom Rules";
+"AddCustomRules" = "Add Custom Rules";
+"ViewPACFile" = "View PAC File";
+"UpdatePAC" = "Update PAC";
+"PACUpdateNotification" = "PAC Update Notification";
+
+// MARK: - PAC Notifications & Errors
+"UpdatingPacRules" = "Updating PAC rules...";
+"PacUpdatedByUserRules" = "PAC has been updated by user rules.";
+"PacUpdateFailedByUserRules" = "Failed to update PAC via user rules.";
+"UpdatePacError" = "Failed to update PAC: %@";
+"InvalidGfwUrl" = "Failed to download GFW List: URL is invalid.";
+"GfwListDownloadFailed" = "Failed to download the latest GFW List.";
+"GfwListDownloadError" = "Failed to download GFW List: %@";
+"GfwListWriteFailed" = "Failed to write the GFW List.";
+"GfwListUpdated" = "GFW List has been updated.";
+"PacUpdatedByGfwList" = "PAC has been updated by the latest GFW List.";
+"PacUpdateFailedByCurl" = "Failed to update PAC via curl method.";
+
+// MARK: - DNS Settings
+"DnsConfiguration" = "DNS Configuration";
+"DnsJsonFormatTip" = "Tip: Use JSON format for DNS configuration.";
+"ViewConfiguration" = "View Configuration";
+"Help" = "Help";
+"Notification" = "Notification";
+"DnsInvalidUTF8" = "Error: Input cannot be encoded as UTF-8.";
+"DnsJSONFormatError" = "Error: Invalid JSON format - %@";
+"DnsFormatEncodingFail" = "Error: Formatted content cannot be encoded to string.";
+"DnsSaveSuccess" = "DNS configuration saved successfully.";
+"DnsSaveFail" = "Error: Failed to save DNS configuration - %@";
+"DnsClear" = "Clear";
+"DnsDefault" = "Default";
+"DnsXray" = "Xray";
+"DnsSingbox" = "Sing-Box";
+"DnsBasic" = "Basic";
+"DnsBasicSettings" = "DNS Basic Settings";
+"DnsDirect" = "Direct DNS";
+"DnsRemote" = "Remote DNS";
+"DnsDirectStrategy" = "Direct target resolution strategy";
+"DnsProxyStrategy" = "Proxy target resolution strategy";
+"DnsBasicSettingsTip" = "Note: These basic options are used to generate the default v2ray/sing-box DNS configuration. If a custom DNS JSON below has been saved, the custom JSON takes precedence. After changing the basic options, click Default in the corresponding custom DNS tab to regenerate JSON with the current basic settings.";
+
+// MARK: - Subscription Settings
+"SubscriptionSettings" = "Subscription Settings";
+"SubscriptionSettingsSubHead" = "Manage subscription details";
+"SubscriptionUrl" = "Subscription URL";
+"Notes" = "Notes";
+"ConfigType" = "Config Type";
+"ConfigTypeAuto" = "Auto";
+"ConfigTypeClash" = "Clash";
+"ConfigTypeNormal" = "Normal";
+"Sort" = "Sort";
+"UpdateInterval" = "Update Interval";
+"AddSubscription" = "Add Subscription";
+"EditSubscription" = "Edit Subscription";
+"SyncAllSubscriptionTitle" = "Sync All Subscriptions";
+"SyncSubscriptionTitle" = "Sync Subscription";
+"SyncAllSubscriptionTip" = "Sync all subscriptions now";
+"SyncSubscriptionNow" = "Sync subscription now";
+"SyncSubscriptionIng" = "Syncing subscriptions...";
+"SyncThroughProxy" = "Sync through proxy";
+"SyncDirect" = "Sync directly";
+
+// MARK: - Routing Settings
+"RoutingSettings" = "Routing Settings";
+"RoutingSettingsSubHead" = "Manage routing rules";
+"AddRoutingRule" = "Add Routing Rule";
+"EditRoutingRule" = "Edit Routing Rule";
+"DomainStrategy" = "Domain Strategy";
+"DomainMatcher" = "Domain Matcher";
+"Direct" = "Direct";
+"Proxy" = "Proxy";
+"Block" = "Block";
+
+// MARK: - Custom Rules Guide
+"CustomRuleGuideTitle" = "Guide for Custom Rules";
+"CustomRuleGuideDescription" = "Each line is a rule: domain, IP, or predefined list.";
+"CustomRulePriorityDescription" = "Priority: Domain Block -> Domain Proxy -> Domain Direct -> IP Block -> IP Proxy -> IP Direct.";
+"CustomRuleDomainIntro" = "• Domain:";
+"CustomRuleDomainExample" = "e.g., example.com, *.google.com";
+"CustomRuleIPIntro" = "• IP:";
+"CustomRuleIPExample" = "e.g., 8.8.8.8, 192.168.0.0/16";
+"CustomRulePredefinedIntro" = "• Predefined:";
+"CustomRulePredefinedExample" = "e.g., geoip:private, geosite:cn, localhost";
+
+// MARK: - Profile Settings
+"ProfileSettings" = "Profile Settings";
+"ProfileSettingsSubHead" = "Manage profile details";
+"Protocol" = "Protocol";
+"Address" = "Address";
+"Username" = "Username";
+"Password" = "Password";
+"OptionalFieldTip" = "Optional";
+"Method" = "Method";
+"Port" = "Port";
+"ID" = "ID";
+"UserID" = "User ID";
+"AlterID" = "Alter ID";
+"Security" = "Security";
+"Encryption" = "Encryption";
+"Network" = "Network";
+"HeaderType" = "Header Type";
+"HttpHost" = "HTTP Host";
+"HttpPath" = "HTTP Path";
+"WsHost" = "WebSocket Host";
+"WsPath" = "WebSocket Path";
+"DsPath" = "DS Path";
+"WsHeaders" = "WebSocket Headers";
+"Flow" = "Flow";
+"TcpFastOpen" = "TCP Fast Open";
+"EnableTls" = "Enable TLS";
+"SkipCertVerify" = "Skip Certificate Verification";
+"TlsSettings" = "TLS Settings";
+"XtlsSettings" = "XTLS Settings";
+"RealitySettings" = "REALITY Settings";
+"ServerName" = "Server Name";
+"Key" = "Key";
+"Seed" = "Seed";
+"Congestion" = "Congestion Control";
+"MTU" = "MTU";
+"TTI" = "TTI";
+"UplinkCapacity" = "Uplink Capacity";
+"DownloadCapacity" = "Download Capacity";
+"XhttpPath" = "XHTTP Path";
+"XhttpHost" = "XHTTP Host";
+"AllowInsecure" = "Allow Insecure Connections";
+"ProfileRemark" = "Profile Remark";
+"Sni" = "SNI";
+"Fingerprint" = "Fingerprint";
+"PublicKey" = "Public Key";
+"PrivateKey" = "Private Key";
+"PrivateKeyPassphrase" = "Private Key Passphrase";
+"ShortID" = "Short ID";
+"SpiderX" = "SpiderX";
+"Extra" = "Extra";
+"Alpn" = "ALPN";
+"TransportSettings" = "Transport Settings";
+"ServerSettings" = "Server Settings";
+"StreamSettings" = "Stream Settings";
+
+// MARK: - Hysteria2 Settings
+"Hysteria2Configuration" = "Hysteria 2 Configuration";
+"ObfuscationSettings" = "Obfuscation Settings";
+"ObfsType" = "Obfs Type";
+"ObfsPassword" = "Obfs Password";
+"HopPortRange" = "Hop Port Range";
+"HopPortRangeTip" = "Overrides port, separate multiple groups with comma (,)";
+"HopInterval" = "Hop Interval (seconds)";
+"Masquerade" = "Masquerade";
+"FinalMask" = "FinalMask";
+"AuthenticationSettings" = "Authentication Settings";
+"AuthType" = "Auth Type";
+"None" = "None";
+"Token" = "Token";
+"AuthPassword" = "Auth Password";
+"BandwidthSettings" = "Bandwidth Settings";
+"UploadBandwidth" = "Upload Bandwidth";
+"DownloadBandwidth" = "Download Bandwidth";
+"AdvancedSettings" = "Advanced Settings";
+
+// MARK: - Menu Operations
+"CoreOn" = "Core: Running";
+"CoreOff" = "Core: Stopped";
+"TurnCoreOn" = "Start Core";
+"TurnCoreOff" = "Stop Core";
+"ViewCoreLog" = "View Core Log";
+"ViewErrorLog" = "View Error Log";
+"ViewTunLog" = "View Tun Log";
+"ViewLogFiles" = "View Log Files...";
+"ClearAllLogs" = "Clear All Logs";
+"ClearAllLogsConfirm" = "Are you sure you want to clear all log files? This action cannot be undone.";
+"LogsCleared" = "Logs cleared";
+"ViewFiles" = "View Files";
+"OpenHomeFolder" = "open ~/.V2rayU folder";
+"Logs" = "Logs";
+"ViewConfigJson" = "View config.json";
+"ViewTunJson" = "View tun.json";
+"ViewPacFile" = "View PAC File";
+"GlobalTip" = "set system HTTP, HTTPS, SOCKS proxy";
+"PacTip" = "set system PAC proxy";
+"ManualTip" = "clear system HTTP, HTTPS, SOCKS proxy";
+"TunTip" = "transparent system-wide proxy via TUN interface";
+"PacMode" = "PAC Mode (pac rule Proxy)";
+"TunMode" = "Tun Mode (transparent Proxy)";
+"GlobalMode" = "Global Mode (set system proxies)";
+"ManualMode" = "Manual Mode (clear system proxies)";
+"RoutingList" = "Select Routing";
+"ServerList" = "Select Server";
+"CombinationList" = "Select Combination";
+"CombinationIndicator" = "Combo";
+"GoSubscriptionSettings" = "Subscription Settings...";
+"GoRoutingSettings" = "Routing Settings...";
+"GoServerSettings" = "Server Settings...";
+"GoCombinationSettings" = "Combination Settings...";
+"GoPreferences" = "Preferences...";
+"LatencyTest" = "Latency Test";
+"Testing" = "Testing";
+"ImportServersFromClipboard" = "Import Servers from Clipboard";
+"ScanQRCodeFromScreen" = "Scan QR Code from Screen";
+"ShareQrCode" = "Share QR Code";
+"CopyHttpProxyShellExportLine" = "Copy HTTP Proxy Shell Export Line";
+"CheckForUpdates" = "Check for Updates";
+"Quit" = "Quit";
+"On" = "On";
+"Off" = "Off";
+
+// MARK: - Help & Diagnostics
+"HelpPageTitle" = "Diagnostics & Help";
+"HelpPageSubHead" = "Check core components and fix common problems";
+"GithubIssues" = "Feedback / Issues";
+"Refresh" = "Refresh";
+"V2rayCoreSwitchStatus" = "Core Switch Status";
+"V2rayCoreRunningStatus" = "Core Running State (launchd)";
+"BackgroundActivity" = "Background Activity";
+"BackgroundActivitySubtitleRunning" = "Core process is running";
+"BackgroundActivitySubtitleNotRunning" = "Core process is not running";
+"OpenSettings" = "Open Settings";
+"Restart" = "Restart";
+"PingState" = "Latency State";
+"RunPingNow" = "Run Latency Test";
+"V2rayCoreInstallAndVersion" = "Core Installation & Version";
+"V2rayUToolPermission" = "V2rayUTool Permission";
+"GeoipFile" = "geoip.dat File";
+"Installed" = "Installed";
+"Missing" = "Missing";
+"PermissionException" = "Permission Exception";
+"V2rayCoreNotInstalled" = "Core is not installed or not executable.";
+"UnableToOpenSystemSettings" = "Unable to open system settings.";
+"PleaseManuallyOpenBackgroundActivity" = "Please manually go to System Settings → General → Background Activity, and allow V2rayU to run in background.";
+"Fix" = "Fix";
+"PingProblem" = "Latency test failed: node unavailable or network issue.";
+"V2rayUToolProblem" = "V2rayUTool permission issue. The core may fail to start.";
+"BackgroundProblem" = "App is not running in background; might be limited by system or core process stopped.";
+"GeoipProblem" = "geoip.dat is missing, which may cause some functions to fail.";
+"V2rayCoreProblem" = "Core is not installed or not executable.";
+"Diagnostics" = "Diagnostics";
+"DiagnosticSubHead" = "Check for common issues and solutions";
+"FAQ" = "FAQ";
+"FaqSubtitle" = "Frequently Asked Questions";
+"SubmitIssue" = "Submit Issue";
+"RunDiagnostic" = "Run Diagnostic";
+
+// MARK: - Table Fields
+"TableFieldSort" = "Sort";
+"TableFieldRemark" = "Remark";
+"TableFieldUrl" = "Subscription URL";
+"TableFieldInterval" = "Update Interval (s)";
+"TableFieldUpdateTime" = "Update Time";
+"TableFieldType" = "Type";
+"TableFieldAddress" = "Address";
+"TableFieldPort" = "Port";
+"TableFieldLatency" = "Latency";
+"TableFieldNetwork" = "Network";
+"TableFieldSecurity" = "Security";
+"TableFieldTodayDown" = "Today's Download";
+"TableFieldTodayUp" = "Today's Upload";
+"TableFieldTotalDown" = "Total Download";
+"TableFieldTotalUp" = "Total Upload";
+"TableFieldDomainStrategy" = "Domain Strategy";
+"TableFieldDirect" = "Direct";
+"TableFieldBlock" = "Block";
+"TableFieldProxy" = "Proxy";
+"SyncAll" = "Sync All";
+"SearchTip" = "Search";
+"AllGroup" = "All Groups";
+"DefaultGroup" = "Default Group";
+"SelectGroup" = "Select Group";
+"SelectAll" = "Select All";
+"CopyURI" = "Copy URI";
+"MoveToTop" = "Move to Top";
+"MoveToBottom" = "Move to Bottom";
+"MoveUp" = "Move Up";
+"MoveDown" = "Move Down";
+
+// MARK: - About Page
+"Version" = "Version";
+"Build" = "Build";
+"CoreVersion" = "Core Version";
+"RelatedFileLocations" = "Related File Locations";
+"ClickAndOpenInFinder" = "Click path to open in Finder";
+"OpenInFinder" = "Open in Finder";
+"OpenSourceProject" = "Open Source Project";
+"OpenSourceLicense" = "Under GNU GPL v3.0 License";
+"OpenSourceLibraries" = "Open Source Libraries";
+"UsedButNotLimitedTo" = "Used but not limited to:";
+"OpenInBrowser" = "Open in Browser";
+"Copyright" = "Copyright";
+"AllRightsReserved" = "All rights reserved.";
+"ErrorLog" = "Error Log";
+"LogFile" = "Log File";
+"SelectLogFile" = "Select log file to view";
+"OKButton" = "OK";
+"CloseButton" = "Close";
+"Selected" = "Selected";
+"Proxies" = "Proxies";
+"PingAllProxies" = "This will ping all proxies and show the result log.";
+
+// MARK: - Core Update Management
+"CoreSettingsTitle" = "Core Settings";
+"CoreSettingsSubtitle" = "Manage your core versions";
+"CheckLatestVersion" = "Check Latest Version";
+"FetchReleases" = "Fetch Releases";
+"CoreInfo" = "Core Info";
+"Architecture" = "Architecture";
+"CurrentVersion" = "Current Version";
+"PreviousPage" = "Previous";
+"NextPage" = "Next";
+"PageIndicator" = "Page %d";
+"AvailableVersions" = "Available Versions";
+"UpdateCore" = "Download";
+"LocalCoreDirectory" = "Local Xray Core Directory";
+"FileDirectory" = "File Directory";
+"LocalCoreVersionDetail" = "Local Xray Core Version Detail";
+"GithubLatestVersion" = "GitHub Latest Version";
+"DownloadAndReplace" = "Download and Replace";
+"Downloading" = "Downloading";
+"DownloadedStatus" = "Downloaded: %@ / Total: %@";
+"CancelDownload" = "Cancel Download";
+"DownloadHint" = "Download Hint";
+"DownloadCanceled" = "Download Canceled";
+"DownloadURLInvalid" = "Invalid download URL: %@";
+"ReplaceSuccess" = "Replace Successful!";
+"CapabilityRulesSettingsTitle" = "Capability Rules";
+"CapabilityRulesRemoteBaseURL" = "Remote Base URL";
+"CapabilityRulesRemoteBaseURLHint" = "Default: https://raw.githubusercontent.com/yanue/V2rayU/main/Build/capability-rules";
+"UpdateCapabilityRules" = "Update Capability Rules";
+"OpenCapabilityRulesDirectory" = "Rules Directory";
+"CapabilityRulesUpdateSuccess" = "Capability rules updated successfully.";
+"CapabilityRulesBaseURLRequired" = "Please enter the remote capability-rules base URL first.";
+"XrayCapabilityRulesStatus" = "Xray Rules";
+"SingboxCapabilityRulesStatus" = "Sing-Box Rules";
+"CapabilityRulesSourceOverride" = "Remote cache";
+"CapabilityRulesSourceBundle" = "Bundled default";
+"CapabilityRulesSourceSwift" = "Swift fallback";
+"CapabilityRulesSourceUnavailable" = "Unavailable";
+"CapabilityRulesSource" = "Source";
+"CapabilityRulesReviewedVersion" = "Reviewed Version";
+"CapabilityRulesCapabilities" = "Capabilities";
+
+"CoreTabType" = "Core Type";
+"CoreTabRules" = "Capability Rules";
+"CoreTabDownload" = "Core Downloads";
+"CoreTypeSettingsSubtitle" = "Profile uses these defaults when set to Auto. CoreCapabilityRules still validates at launch time.";
+"CoreRulesEmpty" = "No capability rules available.";
+"CoreRulesSearchPlaceholder" = "Search capability / note";
+"CoreRulesFilterAll" = "All";
+"CoreRulesKind" = "Kind";
+"CoreRulesStatus" = "Status";
+"CoreRulesNote" = "Note";
+"CoreRulesAppSupport" = "App Support";
+"CoreRulesEvidence" = "Evidence";
+"CapabilityKindInbound" = "Inbound";
+"CapabilityKindOutbound" = "Outbound";
+"CapabilityKindTransport" = "Transport";
+"CapabilityKindSecurity" = "Security";
+"CapabilityKindAdditional" = "Additional";
+"CapabilityKindFlow" = "Flow";
+"CapabilityStatusSupported" = "Supported";
+"CapabilityStatusLegacy" = "Legacy";
+"CapabilityStatusCompatibility" = "Compatibility";
+"CapabilityStatusUnsupported" = "Unsupported";
+"CapabilityStatusRemoved" = "Removed";
+"CapabilityStatusPendingReview" = "Pending Review";
+"CoreDownloadCurrent" = "Current";
+"CoreDownloadSubtitle" = "Browse and download Xray-core / Sing-box releases from GitHub";
+"OperationFailed" = "Operation Failed: %@";
+"StartFailed" = "Start Failed";
+"NoAvailableServerConfig" = "No available server configuration. Please add a server or subscription first.";
+"LaunchDaemonStartFailed" = "Unable to start LaunchDaemon";
+"LocalProxyPortNotReady" = "Local proxy port is not ready. The core may have failed to start or the port is occupied.";
+"SocksPortNotReadyForTun" = "SOCKS port is not ready. TUN service was not started.";
+"TunServiceStartFailed" = "Unable to start TUN service";
+"InvalidCombination" = "Invalid Combination";
+"InvalidCombinationTip" = "Please check whether ports, outbound settings, and linked servers still exist.";
+"InvalidCombinationStartTip" = "Invalid combination. Please check the ports and outbound servers.";
+"CombinationNoAvailableOutbounds" = "The combination has no available outbound servers.";
+"XrayCompatibilityWarningTitle" = "Xray Version Compatibility Notice";
+"CoreCompatibilityWarningTitle" = "Core Compatibility Notice";
+
+"DownloadCompatVersion" = "Download Compatible Version";
+"PacGenerateFailed" = "PAC Generation Failed";
+"PacGenerateFailedTip" = "Unable to generate proxy.js. PAC mode may not take effect.";
+"DownloadTimeoutProxy" = "Download timed out. Please check your network or proxy settings.";
+"DownloadTimeoutError" = "Download timed out";
+"DownloadSaveFailed" = "Failed to save file";
+"DownloadErrorOccurred" = "An error occurred during download";
+"ClearLogFileFailed" = "Failed to clear log file";
+"PortInUse" = "Port is already in use";
+"PortInUseTip" = "The port is already in use, please choose another port number.";
+"Install" = "Install";
+"InstallTitle" = "Install & Authorize";
+"InstallFailed" = "Installation Failed";
+"InstallFailedManual" = "Please run the installation script manually.";
+"ReplaceCore" = "Replace Core";
+"ReleaseNotesTitle" = "Release Notes";
+"SkipVersion" = "Skip This Version";
+"InstallUpdate" = "Install Update";
+"CheckingForUpdates" = "Checking for Updates...";
+"InstallV2rayU" = "Install V2rayU";
+"NewVersionTip" = "A new version (%@) is available!";
+"AlreadyLatestVersion" = "Already Latest Version";
+"AlreadyLatestToast" = "Current %@ is already the latest version";
+"V2rayUUpdateTitle" = "V2rayU Update";
+
+// MARK: - FAQ
+"FaqHowItWorks" = "How does V2rayU work?";
+"FaqConfigLocation" = "Where are the configuration files stored?";
+"FaqOperationModes" = "What are the operation modes?";
+"FaqModeRoutingRelation" = "What is the relationship between operation mode and routing?";
+"FaqRoutingPriority" = "What is the routing priority?";
+"FaqTrueGlobalProxy" = "How to achieve a true global proxy?";
+"FaqManualCoreUpdate" = "How to manually update the core?";
+"FaqHowItWorksDetail" = "V2rayU is a macOS application based on Xray-core/Sing-Box core, providing a graphical interface to simplify configuration and management. It uses launchd to start and manage the core process and sets the system proxy (HTTP/SOCKS or Tun) to enable proxy internet access.";
+"FaqConfigLocationDetail2" = "V2rayU stores its configuration files in the ~/.V2rayU/ directory in the user's home folder. You can run 'ls -al ~/.V2rayU/' in the terminal to view the details.
+
+File descriptions:
+~/.V2rayU/config.json - Main core configuration file
+~/.V2rayU/tun.json - TUN mode configuration file (sing-box)
+~/.V2rayU/.V2rayU.db - SQLite database, stores subscriptions and server information
+~/.V2rayU/proxy.js - Auto proxy configuration file for PAC mode
+~/.V2rayU/V2rayU.log - Application log file
+~/.V2rayU/core.log - Core engine log file
+~/.V2rayU/tun.log - TUN helper log file
+/usr/local/v2rayu/V2rayUTool - Helper tool for system proxy settings, must have setuid root:admin permissions
+/usr/local/v2rayu/bin/ - Core binary directory (xray-core / sing-box)";
+"FaqOperationModesDetail2" = "Mainly about how the system proxy is set:
+
+• PAC mode: System sets PAC proxy (Settings -> Network -> Wi-Fi -> Details -> Proxy -> Auto Proxy Configuration)
+• Global mode: System sets global HTTP/SOCKS proxy (Settings -> Network -> Wi-Fi -> Details -> Proxy -> HTTP, HTTPS and SOCKS Proxy)
+• Manual mode: Do not set system proxy (clears all system proxy settings including PAC, HTTP, HTTPS, SOCKS)
+• Tun mode: Uses sing-box's TUN function (network extension) to implement true system-level proxy, all applications automatically go through the proxy
+
+Note: PAC, Global, Manual modes mainly affect browsers and other system-level applications that use system proxy. For applications that don't use system proxy, you need to configure proxy manually or use Tun mode.";
+"FaqModeRoutingRelationDetail" = "The operation mode determines how the system proxy is configured, while routing rules decide which traffic goes through the proxy server and which goes directly. Together, they enable flexible network access strategies.";
+"FaqRoutingPriorityDetail2" = "Routing priority: Domain block -> Domain proxy -> Domain direct -> IP block -> IP proxy -> IP direct";
+"FaqTrueGlobalProxyDetail2" = "Use Tun mode! V2rayU supports Tun mode through sing-box's TUN function (network extension), which can implement true system-level proxy. All network traffic on your Mac will automatically go through the proxy without needing to configure proxy in individual applications.
+
+To enable Tun mode: Click the V2rayU icon in the menu bar -> Select Tun mode, or use the keyboard shortcut.";
+"FaqManualCoreUpdateDetail2" = "You can manually download the xray-core or sing-box version that matches your system architecture. The core binaries are located in /usr/local/v2rayu/bin/ (e.g., xray-core/xray-arm64, sing-box/sing-box-arm64). Replace the corresponding binary file there, then restart the core from V2rayU.";
+
+// MARK: - Diagnostics - Check Item Titles
+"DiagNetworkConnectivity" = "Network Connection";
+"DiagSystemProxy" = "System Proxy Settings";
+"DiagFirewall" = "Firewall & Security Software";
+"DiagCoreRunning" = "Core Running Status";
+"DiagLaunchdProcess" = "Launchd Process Status";
+"DiagLaunchdNotLoaded" = "Launchd agent not loaded";
+"DiagLaunchdNotRunning" = "Launchd agent loaded but process not running";
+"DiagLaunchdRunning" = "Process running (PID: %@)";
+"DiagLaunchdReload" = "Reload";
+"DiagLocalPortConflict" = "Local Port Conflict";
+"DiagTunRuntime" = "TUN Runtime Status";
+"DiagPingLatency" = "Latency & Availability";
+"DiagLogAnalysis" = "Log Analysis";
+"DiagVPNConflict" = "VPN Conflict Detection";
+"DiagBasicNetwork" = "Basic Network";
+"DiagProxyConnectivity" = "Proxy Connectivity";
+
+// MARK: - Diagnostics - Merged File Check Titles
+"DiagAppDataDir" = "~/.V2rayU Directory Check";
+"DiagV2rayUTool" = "V2rayUTool Binary Check";
+"DiagXrayCore" = "xray-core Binary Check";
+"DiagSingBox" = "sing-box Binary Check";
+"DiagUpdateScript" = "update-xray.sh Script Check";
+"DiagSudoersCheck" = "v2rayu-sudoer Rules";
+"DiagTunDaemon" = "tun-helper.plist Daemon";
+"DiagConfigCheck" = "~/.V2rayU/config.json Check";
+"DiagGeoDataFiles" = "GeoData / sing-box Rule Set Files";
+
+// MARK: - Diagnostics - Status
+"DiagPending" = "Pending...";
+"DiagChecking" = "Checking...";
+"DiagPassed" = "Passed";
+"DiagFailed" = "Failed";
+
+// MARK: - Diagnostics - Sub-check Labels
+"DiagSubFileExists" = "File exists";
+"DiagSubExecutable" = "Executable";
+"DiagSubNotExecutable" = "Not executable";
+"DiagSubRootAdmin" = "root:admin ownership correct";
+"DiagSubNotRootAdmin" = "Not root:admin ownership";
+"DiagSubSetuid" = "setuid(+s) permission correct";
+"DiagSubNoSetuid" = "Missing setuid(+s) permission";
+"DiagSubNoQuarantine" = "No quarantine flag";
+"DiagSubQuarantined" = "File is quarantined";
+"DiagSubVersionTooOld" = "Version too old";
+"DiagSubVersionUnknown" = "Cannot determine version";
+"DiagToolVersionOld" = "V2rayUTool version is too old, reinstall required.";
+"DiagToolNoSetuid" = "V2rayUTool is missing setuid(+s) permission, cannot perform privileged operations. Click 'Fix Now'.";
+"DiagFileQuarantined" = "File is quarantined by macOS and cannot execute normally. Click 'Fix Now' to remove quarantine flag.";
+"DiagSingBoxArchMismatch" = "sing-box architecture mismatch (file: %@, system: %@)";
+"DiagUpdateScriptNoPermission" = "update-xray.sh is not executable, reinstall required";
+"DiagSubDirExists" = "Directory exists";
+"DiagSubDirWritable" = "Directory writable";
+"DiagSubDirNotWritable" = "Directory not writable";
+"DiagSubDirOwnerOK" = "Directory owned by current user";
+"DiagSubDirOwnerWrong" = "Directory not owned by current user";
+"DiagSubDbExists" = "Database file exists";
+"DiagSubDbNotExists" = "Database file not found (will be created on first launch)";
+"DiagSubDbWritable" = "Database writable";
+"DiagSubDbReadonly" = "Database is read-only";
+"DiagAppDataDirMissing" = "Data directory ~/.V2rayU does not exist. Reinstall required.";
+"DiagAppDataDirNotWritable" = "Data directory ~/.V2rayU is not writable. Permissions may have been changed. Click 'Fix Now' to repair.";
+"DiagAppDataDirOwnerWrong" = "Data directory ~/.V2rayU is not owned by the current user, which may cause read/write failures. Click 'Fix Now' to repair.";
+"DiagDbReadonly" = "Database file .V2rayU.db is read-only and cannot save data. Possible causes:\n1. Directory permissions changed (e.g. owned by root)\n2. Disk space is full\n3. File system mounted read-only\n\nClick 'Fix Now' to repair permissions.";
+
+// MARK: - Diagnostics - Problem Descriptions
+"DiagNetUnavailable" = "Computer cannot access the internet. Please check:\n1. Router/broadband is working\n2. Wi-Fi is connected\n3. Ethernet cable is plugged in";
+"DiagNetDNSFailed" = "DNS server cannot resolve domain names. This may be due to network settings or VPN software conflict. Please check DNS settings";
+"DiagNetIPFailed" = "Cannot access public IPs, network may be restricted or blocked by firewall";
+"DiagProxyNotEnabled" = "System proxy is not enabled. Applications won't use the proxy. Please enable proxy in system network settings, or select 'Global'/'PAC' mode in V2rayU";
+"DiagProxyPortWrong" = "System proxy port is incorrect. V2rayU uses port %d (SOCKS) or %d (HTTP). Please modify in system proxy settings";
+"DiagProxyPortMismatch" = "System proxy port is wrong (current: %d, should be: %d)";
+"DiagFirewallBlocked" = "Firewall or security software (like 360, Tencent Security, MacKeeper, etc.) may be blocking the proxy process or ports. Please try:\n1. Add trust in security software\n2. Temporarily disable firewall\n3. Allow V2rayU in System Preferences";
+"DiagCoreNotInstalled" = "V2ray core is not installed. This is required for proxy functionality. Click 'Fix Now' to auto-download and install";
+"DiagCoreNotExecutable" = "Core file exists but is not executable. Try reinstalling or manually fix permissions";
+"DiagCoreNotRunning" = "Core process is not running, proxy service unavailable";
+"DiagCoreStopped" = "Proxy is disabled. Click 'Start Core' to enable proxy";
+"DiagCoreStartFailed" = "Core process is not running. Possible reasons:\n1. Configuration error\n2. Port is occupied\n3. Core crashed\n\nCheck log analysis for more info, or try restarting core";
+"DiagToolMissing" = "V2rayU helper tool is not installed. This may prevent auto-installation. Try reinstalling V2rayU";
+"DiagToolNoPermission" = "Helper tool permission is insufficient. Running V2rayU requires admin privileges. Please try:\n1. Reopen V2rayU\n2. Grant Full Disk Access in System Settings";
+"DiagConfigNotExist" = "Configuration file does not exist";
+"DiagConfigInvalid" = "Configuration file format is invalid JSON";
+"DiagConfigMissingField" = "Configuration file missing required fields";
+"DiagNodeNotSelected" = "Please select a node first";
+"DiagDNSResolveFailed" = "DNS cannot resolve node domain '%@'. Possible reasons:\n1. Current network's DNS cannot resolve this domain\n2. Node domain has expired\n3. Network uses custom DNS that cannot resolve\n\nTry changing network or switching nodes";
+"DiagPortConnectFailed" = "Cannot connect to remote server (%@:%d). Possible reasons:\n1. Node server is offline\n2. Port is blocked (common ports like 443, 8388 are easily blocked)\n3. Current network has overseas connection limits\n\nTry switching nodes or ports";
+"DiagPortOccupied" = "Local port %d is occupied by '%@'. Close that program or change port in settings";
+"DiagGeoipMissing" = "GeoIP database file is not installed. This will prevent routing rules from working (domestic direct, overseas proxy). Click 'Fix Now' to auto-download";
+"DiagGeositeMissing" = "missing, click 'Fix Now' to auto-download";
+"DiagLatencyHigh" = "High latency (%dms), may affect browsing experience. Try switching to a node with lower latency";
+"DiagLatencyFailed" = "Cannot connect to node for latency test. Node may be unavailable or blocked. Try switching nodes";
+"DiagBasicNetworkFailed" = "Cannot access the internet (apple.com unreachable). Check your network connection";
+"DiagProxyConnectFailed" = "Cannot access external sites via local proxy. The proxy may not be working properly";
+"DiagProxyConnectOK" = "Proxy connectivity OK";
+"DiagTunRuntimeOK" = "TUN is running normally (route: %@)";
+"DiagTunNotActive" = "TUN mode is not currently running";
+"DiagTunBackendNotReady" = "TUN backend SOCKS port %d is not ready";
+"DiagTunHelperNotRunning" = "tun-helper is not running";
+"DiagTunRouteNotReady" = "TUN routes are not ready (current default: %@)";
+"DiagTunInterfaceNotFound" = "No utun interface found";
+"DiagBasicNetworkOK" = "Internet accessible";
+"DiagConfigValidOK" = "Configuration is valid JSON with required fields";
+"DiagConfigValidProblems" = "Configuration issues: %@";
+"DiagConfigFileExists" = "Config file exists (%d bytes)";
+"DiagConfigFileMissing" = "Configuration file is missing";
+"DiagConfigFileEmpty" = "Configuration file is empty";
+"DiagSystemProxyOK" = "System proxy correctly configured (port %d)";
+"DiagSystemProxyPACOK" = "PAC proxy correctly configured (%@)";
+"DiagSystemProxyNotNeeded" = "System proxy not needed in current mode";
+"DiagProxyPacUrlMismatch" = "PAC URL mismatch (current: %@, expected: %@)";
+"DiagReportCopied" = "Report copied to clipboard. Please paste into the GitHub issue.";
+"DiagReportTooLong" = "Report too long for URL, copied to clipboard instead";
+"DiagCategoryFiles" = "File Checks";
+"DiagCategoryStatus" = "Runtime Status";
+"DiagCategoryNetwork" = "Network Checks";
+"DiagCategoryLogs" = "Log Analysis";
+"DiagCoreArchCorrect" = "Architecture matches system (%@)";
+"DiagCoreArchMismatch" = "Architecture mismatch (file: %@, system: %@)";
+"DiagSingBoxNotExecutable" = "sing-box binary is not executable";
+"DiagSingBoxNotInstalled" = "sing-box binary is not installed";
+"DiagUpdateScriptMissing" = "update-xray.sh is missing, reinstall required";
+"DiagSudoersFileMissing" = "Sudoers file is missing, reinstall required";
+"DiagSudoersNotEffective" = "Sudoers NOPASSWD rules are not effective, reinstall required";
+"DiagTunDaemonMissing" = "tun-helper LaunchDaemon plist is missing, reinstall required";
+
+// MARK: - Diagnostics - Actions
+"DiagOpenNetworkSettings" = "Open Network Settings";
+"DiagFixNow" = "Fix Now";
+"DiagRestartCore" = "Restart Core";
+"DiagStartCore" = "Start Core";
+"DiagCheckNetwork" = "Check Network";
+"DiagViewConfig" = "View Config";
+"DiagReTest" = "Re-test";
+
+// MARK: - Diagnostics - Special Modes
+"DiagProxyNotNeededTunnel" = "Tun mode does not require system proxy (uses network extension)";
+"DiagProxyNotNeededManual" = "Manual mode does not set system proxy";
+"DiagProxyNotNeededOff" = "Proxy is disabled";
+"DiagProxyRequired" = "System proxy required (PAC/Global mode)";
+
+
+// MARK: - Legacy Migration
+"ImportLegacyData" = "Import from v4";
+"ImportLegacyDataTitle" = "Import Data from v4";
+"ImportLegacyDataTip" = "Import servers and subscriptions from V2rayU v4 (UserDefaults version)";
+"LegacyDataMigrated" = "Data has already been migrated";
+"LegacyDataMigrationSuccess" = "Migration completed: %d servers, %d subscriptions imported";
+"LegacyDataMigrationFailed" = "Migration failed: %@";
+"LegacyDataMigrationNoData" = "No legacy data found to import";
+"ImportLegacyDataMigrating" = "Migrating data...";
+"ImportLegacyDataDetected" = "Legacy data detected:";
+"ImportLegacyDataNoData" = "No legacy data detected";
+"ImportLegacyDataServerCount" = "%d servers";
+"ImportLegacyDataSubCount" = "%d subscriptions";
+"ImportLegacyConfirmTitle" = "Confirm Import";
+"ImportLegacyConfirmMessage" = "Import %d servers and %d subscriptions from v4 to v5?";
+"ImportLegacyDetectedKeys" = "Detected keys:";
+"ImportLegacyServerList" = "Server list:";
+"ImportLegacySubList" = "Subscription list:";
+"ImportLegacyMigratingStart" = "Starting migration...";
+"ImportLegacyMigratingComplete" = "Migration complete!";
+"ImportLegacyNoDataFound" = "No legacy data found";
+"ImportLegacyMigrationFailed" = "Migration failed: ";
+"ImportLegacyItemsRemaining" = "%d items remaining";
+"ImportLegacyV2rayServerList" = "v2rayServerList: ";
+"ImportLegacyV2raySubList" = "v2raySubList: ";
+"ImportLegacySuccessServers" = "Successfully imported %d servers";
+"ImportLegacySuccessSubscriptions" = "Successfully imported %d subscriptions";
+"RemoveDuplicateServers" = "Remove Duplicate Servers";
+"RemoveDuplicateConfirm" = "Removed %d duplicate servers";
+"RemoveDuplicateConfirmTip" = "This will remove duplicate servers. This action cannot be undone.";
+
+// Import Servers
+"ImportServers" = "Import";
+"ImportServersTitle" = "Import Servers";
+"ImportSourceUri" = "URI";
+"ImportSourceJson" = "JSON";
+"ImportSourceSubscription" = "Subscription";
+"ImportSourceClash" = "Clash";
+"ImportSourceLegacy" = "Legacy";
+"ImportUriPlaceholder" = "vmess:// or ss:// or ssr:// or vless:// or trojan://";
+"ImportJsonPlaceholder" = "Paste v2ray/xray JSON config here";
+"ImportSubscriptionPlaceholder" = "https://subscription-url";
+"ImportClashPlaceholder" = "Paste Clash YAML config here";
+"ImportLegacyInfo" = "Found %d servers and %d subscriptions from legacy version. Import now?";
+"ImportLegacyButton" = "Import";
+"ImportLegacySkip" = "Skip";
+"ImportButton" = "Import";
+"ImportSuccessCount" = "Successfully imported %d servers";
+"ImportFailed" = "Import failed";
+"ImportFailedDetail" = "Import failed: %@";
+"ImportParsing" = "Parsing...";
+"ImportFromFile" = "Import from file";
+
+// MARK: - TUN Settings
+"TunSettings" = "TUN Settings";
+"TunAddress" = "TUN Address";
+"TunMtu" = "TUN MTU";
+"TunStack" = "TUN Stack";
+"TunRemoteDns" = "Tun Remote DNS";
+"TunRemoteDnsTip" = "Override system DNS to avoid pollution. Used as remote DNS resolver for foreign domains via tunnel in TUN mode.";
+"TunChinaDns" = "Tun China DNS";
+"TunStrictRoute" = "Strict route (strict_route)";
+"TunStrictRouteTip" = "Enabled by default. Try turning it off if the network occasionally breaks after switching networks.";
+"TunAutoRebuild" = "Auto rebuild TUN after network changes";
+"TunAutoRebuildTip" = "Automatically rebuild the tunnel after Wi-Fi changes or wake-up to avoid broken routes.";
+"TunLogLevel" = "TUN Log Level";
+"TunEnableIPv6" = "Enable IPv6";
+"TunEnableIPv6Tip" = "Add IPv6 address (fd00::1/64) to the TUN interface, allowing IPv6 traffic through the tunnel.";
+"TunEnableIPv6ChromeWarning" = "Chrome may not work properly when TUN IPv6 is enabled (e.g. ERR_CONNECTION_CLOSED). To turn off this reminder, uncheck \"Show reminder when starting TUN\" in TUN settings.";
+"TunEnableIPv6AlertTitle" = "TUN IPv6 Reminder";
+"TunShowIPv6Reminder" = "Show reminder when starting TUN";
+
+// MARK: - Combination / Profile Hints
+"CombinationCountFormat" = "%d combinations";
+"AutoCoreSelectionHint" = "Auto: Select via CoreCapabilityRules, prefer Xray, and fall back to Sing-Box when needed.";
+"AutoDefaultCoreSelectionHint" = "Auto: This protocol defaults to %@. CoreCapabilityRules will still be checked before startup.";
+"ManualCoreSelectionHint" = "%@ selected. CoreCapabilityRules will check whether the current node is compatible before startup.";
+"PingAlreadyRunning" = "Ping is already running";
+"PingNoNodes" = "No nodes available to ping";
+"PingStartAll" = "Started pinging all nodes";
+"PingSingleAlreadyRunning" = "Ping is already running, skipped single-node ping";
+"PingStartNode" = "Started pinging node";
+"PingStartSingleNodeFormat" = "Started single-node ping: %@";
+"PingSuccessFormat" = "Ping succeeded: %@ - %dms";
+"PingFailureRetryFormat" = "Ping failed: %@ - attempt %d: %@";
+"PingCompleteSingleNodeFormat" = "Completed single-node ping: %@";

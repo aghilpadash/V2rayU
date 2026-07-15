@@ -1,0 +1,202 @@
+//
+//  V2rayStruct.swift
+//  V2rayU
+//
+//  Created by yanue on 2018/10/26.
+//  Copyright © 2018 yanue. All rights reserved.
+//
+
+import Foundation
+
+// doc: https://www.v2ray.com/chapter_02/01_overview.html
+
+struct V2rayStruct: Codable {
+    var log: V2rayLog = V2rayLog()
+    var metrics: v2rayMetrics?
+    var dns: V2rayDns?
+    var stats: V2rayStats?
+    var routing: V2rayRouting = V2rayRouting()
+    var policy: V2rayPolicy?
+    var inbounds: [V2rayInbound]?
+    var outbounds: [V2rayOutbound]?
+    var observatory: V2rayObservatory?
+}
+
+extension V2rayStruct {
+    func toJSON() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+        guard let jsonData = try? encoder.encode(self),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return "{}"
+        }
+        return jsonString
+    }
+}
+
+enum V2rayLogLevel: String, Codable, CaseIterable, Identifiable {
+    case debug
+    case info
+    case warning
+    case error
+    case none
+    var id: Self { self }
+}
+
+// log
+struct V2rayLog: Codable {
+    var loglevel: V2rayLogLevel = .info
+    var error: String = ""
+    var access: String = ""
+}
+
+struct v2rayMetrics: Codable {
+    var tag: String = "metrics_out"
+}
+
+struct V2rayApi: Codable {
+    var tag: String = "api" // 用于标识 API 的标识符,需要在 routing 中设置增加规则: {"inboundTag": ["api"], "outboundTag": "api", "type": "field"}
+    var listen: String? // 1.8.12起 这里不设置就需要在 inbounds 中设置
+    var services: [String] = ["StatsService"]
+}
+
+struct V2rayDns: Codable {
+    var hosts: [String: HostValue]?
+    var servers: [Server]?
+    var clientIp: String?
+    var queryStrategy: String?
+    var disableCache: Bool?
+    var disableFallback: Bool?
+    var disableFallbackIfMatch: Bool?
+    var tag: String?
+
+    // 自定义类型，用于处理 hosts 中的值，可能是 String 或 [String]
+    enum HostValue: Codable {
+        case single(String)
+        case multiple([String])
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let singleValue = try? container.decode(String.self) {
+                self = .single(singleValue)
+            } else if let multipleValues = try? container.decode([String].self) {
+                self = .multiple(multipleValues)
+            } else {
+                throw DecodingError.typeMismatch(HostValue.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid HostValue"))
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .single(let value):
+                try container.encode(value)
+            case .multiple(let values):
+                try container.encode(values)
+            }
+        }
+    }
+
+    // 自定义类型，用于处理 servers 中的值，可能是 String 或包含多个字段的对象
+    enum Server: Codable {
+        case address(String)
+        case detailed(ServerDetail)
+
+        struct ServerDetail: Codable {
+            var address: String
+            var port: Int?
+            var domains: [String]?
+            var expectIPs: [String]?
+            var skipFallback: Bool?
+            var clientIP: String?
+            var queryStrategy: String?
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let address = try? container.decode(String.self) {
+                self = .address(address)
+            } else if let detailedValue = try? container.decode(ServerDetail.self) {
+                self = .detailed(detailedValue)
+            } else {
+                throw DecodingError.typeMismatch(Server.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid Server value"))
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .address(let address):
+                try container.encode(address)
+            case .detailed(let detailed):
+                try container.encode(detailed)
+            }
+        }
+    }
+}
+
+struct V2rayStats: Codable {
+    // 没有配置,空结构体{}即可统计,需配合policy使用
+}
+
+struct V2rayRouting: Codable {
+    enum domainStrategy: String, Codable {
+        case AsIs
+        case IPIfNonMatch
+        case IPOnDemand
+    }
+    enum domainMatcher: String, Codable {
+        case hybrid
+        case linear
+    }
+    
+    var domainStrategy: domainStrategy = .AsIs
+    var domainMatcher: domainMatcher?
+    var rules: [V2rayRoutingRule] = []
+    var balancers: [V2rayRoutingBalancer]?
+}
+
+struct V2rayRoutingRule: Codable {
+    var domainMatcher: String?
+    var type: String = "field"
+    var domain: [String]? = []
+    var ip: [String]? = []
+    var port: String?
+    var sourcePort: String?
+    var network: String?
+    var source: [String]?
+    var user: [String]?
+    var inboundTag: [String]?
+    var `protocol`: [String]? // ["http", "tls", "bittorrent"]
+    var outboundTag: String? = "direct"
+    var balancerTag: String?
+}
+
+struct V2rayRoutingBalancer: Codable {
+    var selector: [String]?
+    var strategy: V2rayRoutingBalancerStrategy?
+    var tag: String?
+    var fallbackTag: String?
+}
+
+struct V2rayRoutingBalancerStrategy: Codable {
+    var type: String? // type : "random" | "roundRobin" | "leastPing" | "leastLoad"
+}
+
+struct V2rayPolicy: Codable {
+    var system: SystemPolicy = SystemPolicy()
+}
+
+struct SystemPolicy: Codable {
+    var statsInboundUplink: Bool = true
+    var statsInboundDownlink: Bool = true
+    var statsOutboundUplink: Bool = true
+    var statsOutboundDownlink: Bool = true
+}
+
+struct V2rayObservatory: Codable {
+    var subjectSelector: [String] = ["proxy"]
+    var probeUrl: String = "http://www.gstatic.com/generate_204"
+    var probeInterval: String = "2s"
+    var enableConcurrency: Bool?
+}

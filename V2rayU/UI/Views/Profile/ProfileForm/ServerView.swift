@@ -1,0 +1,193 @@
+//
+//  ServerView.swift
+//  V2rayU
+//
+//  Created by yanue on 2024/11/24.
+//
+
+import Foundation
+import SwiftUI
+
+struct ConfigServerView: View {
+    @ObservedObject var item: ProfileModel
+
+    var body: some View {
+        VStack {
+            HStack {
+                Image(systemName: "server.rack")
+                localized(.ServerSettings)
+                Spacer()
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 10)
+            .font(.title3)
+
+            VStack {
+                getTextFieldWithLabel(label: .Remark, text: $item.remark)
+                
+                // 需要禁用显示: dns, http, blackhole, freedom
+                getPickerWithLabel(label: .`Protocol`, selection: $item.protocol,ignore: [.dns, .http, .blackhole, .freedom])
+
+                HStack {
+                    LocalizedTextLabelView(label: .Core).frame(width: 150, alignment: .trailing)
+                    Spacer()
+                    Picker("", selection: $item.coreSelection) {
+                        ForEach(ProfileCoreSelection.allCases) { selection in
+                            Text(selection.displayName).tag(selection)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.leading, 7)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(coreSelectionHint)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if let warning = coreCompatibilityWarning {
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundColor(coreCompatibilityDecision.canLaunch ? .orange : .red)
+                            .lineLimit(4)
+                    }
+                }
+                .padding(.leading, 107)
+
+                // Use .id(item.protocol) so SwiftUI fully tears down and recreates
+                // this subtree (including all TextField focus state) when the
+                // protocol changes, preventing AttributeGraph / UpdateViewFocusItem crashes.
+                Group {
+                    if item.protocol == .trojan {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                    }
+
+                    if item.protocol == .vmess {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .ID, text: $item.password)
+                        getNumFieldWithLabel(label: .AlterID, num: $item.alterId)
+                        if item.alterId > 0 {
+                            Text("alterId > 0 与 sing-box 不兼容，建议改为 0")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .padding(.leading, 107)
+                        }
+                        getTextFieldWithLabel(label: .Encryption, text: $item.encryption)
+                    }
+
+                    if item.protocol == .vless {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .ID, text: $item.password)
+                        getTextFieldWithLabel(label: .Flow, text: $item.flow)
+                        getTextFieldWithLabel(label: .Encryption, text: $item.encryption)
+                    }
+
+                    if item.protocol == .shadowsocks {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                        HStack {
+                            getTextLabel(label: .Method)
+                            Picker("", selection: $item.encryption) {
+                                ForEach(V2rayOutboundShadowsockMethod, id: \.self) { pick in
+                                    Text(pick)
+                                }
+                            }
+                        }
+                    }
+
+                    if item.protocol == .socks {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        HStack {
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.3))
+                                .frame(height: 1)
+                            Text(String(localized: .OptionalFieldTip))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.3))
+                                .frame(height: 1)
+                        }
+                        getTextFieldWithLabel(label: .Username, text: $item.host) // 用 host 存储 socks username
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                    }
+
+                    if item.protocol == .hysteria2 {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                    }
+
+                    if item.protocol == .anytls {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                    }
+
+                    if item.protocol == .naive {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Username, text: $item.host)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                    }
+
+                    if item.protocol == .ssh {
+                        getTextFieldWithLabel(label: .Address, text: $item.address)
+                        getNumFieldWithLabel(label: .Port, num: $item.port)
+                        getTextFieldWithLabel(label: .Username, text: $item.host)
+                        getTextFieldWithLabel(label: .Password, text: $item.password)
+                        HStack(alignment: .top) {
+                            LocalizedTextLabelView(label: .PrivateKey).frame(width: 150, alignment: .trailing)
+                            Spacer()
+                            TextEditor(text: $item.sshPrivateKey)
+                                .frame(height: 100)
+                                .font(.system(.body, design: .monospaced))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                                )
+                                .padding(.leading, 7)
+                        }
+                        getTextFieldWithLabel(label: .PrivateKeyPassphrase, text: $item.sshPrivateKeyPassphrase)
+                    }
+                }
+                .id(item.protocol) // Force full subtree recreation on protocol change
+            }
+            .padding() // 1. 内边距
+            .background() // 2. 然后背景
+            .clipShape(RoundedRectangle(cornerRadius: 8)) // 3. 内圆角
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                    .shadow(color: Color.primary.opacity(0.1), radius: 1, x: 0, y: 1)
+            ) // 4. 添加边框和阴影
+        }
+    }
+
+    private var coreCompatibilityDecision: XrayCoreCompatibilityDecision {
+        item.entity.resolveCoreCompatibility()
+    }
+
+    private var coreSelectionHint: String {
+        let selection = item.coreSelection
+        if selection == .auto {
+            let defaultSelection = CoreSelectionDefaults.selection(for: item.protocol)
+            if defaultSelection == .auto {
+                return String(localized: .AutoCoreSelectionHint)
+            }
+            return String(localized: .AutoDefaultCoreSelectionHint, arguments: defaultSelection.displayName)
+        }
+        return String(localized: .ManualCoreSelectionHint, arguments: selection.displayName)
+    }
+
+    private var coreCompatibilityWarning: String? {
+        guard let message = coreCompatibilityDecision.warningMessage else { return nil }
+        return message.components(separatedBy: "\n").first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+}
